@@ -65,5 +65,5 @@ jobs:
             -scheme LibreTranslateApp \
             -sdk iphonesimulator \
             -configuration Debug \
-            -destination 'platform:iOS Simulator, arch:x86_64, id:9FB75E57-04BE-4940-83B6-3953F731BAE3, OS:26.1, name:iPhone 17' \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
             build
