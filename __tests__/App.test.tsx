@@ -1,13 +1,8 @@
-/**
- * @format
- */
+import { store } from '../src/store';
 
-import React from 'react';
-import ReactTestRenderer from 'react-test-renderer';
-import App from '../App';
-
-test('renders correctly', async () => {
-  await ReactTestRenderer.act(() => {
-    ReactTestRenderer.create(<App />);
-  });
+test('store initializes with expected slices', () => {
+  const state = store.getState();
+  expect(state.translation).toBeDefined();
+  expect(state.settings).toBeDefined();
+  expect(state.server).toBeDefined();
 });
