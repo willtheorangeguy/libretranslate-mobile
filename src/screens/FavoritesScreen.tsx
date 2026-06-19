@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -15,9 +15,12 @@ import { Translation } from '../types';
 import { DatabaseService } from '../services/DatabaseService';
 import { useAppDispatch } from '../hooks/useRedux';
 import { setFavorites } from '../store/slices/translationSlice';
+import { useThemeColors, ThemeColors } from '../theme';
 
 export default function FavoritesScreen() {
   const dispatch = useAppDispatch();
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [favorites, setFavoritesState] = useState<Translation[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -59,7 +62,7 @@ export default function FavoritesScreen() {
           style={styles.button}
           onPress={() => Clipboard.setString(item.translatedText)}
         >
-          <MaterialIcons name="content-copy" size={18} color="#007AFF" />
+          <MaterialIcons name="content-copy" size={18} color={colors.primary} />
           <Text style={styles.buttonText}>Copy</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -68,7 +71,7 @@ export default function FavoritesScreen() {
           style={styles.button}
           onPress={() => handleUnfavorite(item.id)}
         >
-          <MaterialIcons name="favorite" size={18} color="#FF3B30" />
+          <MaterialIcons name="favorite" size={18} color={colors.danger} />
           <Text style={styles.buttonText}>Remove</Text>
         </TouchableOpacity>
       </View>
@@ -80,7 +83,7 @@ export default function FavoritesScreen() {
       <TextInput
         accessibilityLabel="Search favorites"
         placeholder="Search favorites..."
-        placeholderTextColor="#999"
+        placeholderTextColor={colors.textMuted}
         value={search}
         onChangeText={setSearch}
         onSubmitEditing={() => {
@@ -93,7 +96,7 @@ export default function FavoritesScreen() {
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <FlatList
@@ -108,61 +111,62 @@ export default function FavoritesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-    padding: 12,
-  },
-  searchInput: {
-    backgroundColor: '#FFF',
-    borderColor: '#DDD',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 10,
-    color: '#000',
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  empty: {
-    color: '#777',
-    fontSize: 16,
-  },
-  card: {
-    backgroundColor: '#FFF',
-    borderColor: '#ECECEC',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 10,
-  },
-  source: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 6,
-  },
-  target: {
-    fontSize: 16,
-    color: '#000',
-    fontWeight: '600',
-  },
-  actions: {
-    marginTop: 8,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  buttonText: {
-    color: '#007AFF',
-    fontSize: 13,
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+      padding: 12,
+    },
+    searchInput: {
+      backgroundColor: c.surface,
+      borderColor: c.border,
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      marginBottom: 10,
+      color: c.textPrimary,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    empty: {
+      color: c.textSecondary,
+      fontSize: 16,
+    },
+    card: {
+      backgroundColor: c.surface,
+      borderColor: c.borderSubtle,
+      borderWidth: 1,
+      borderRadius: 10,
+      padding: 12,
+      marginBottom: 10,
+    },
+    source: {
+      fontSize: 14,
+      color: c.textSecondary,
+      marginBottom: 6,
+    },
+    target: {
+      fontSize: 16,
+      color: c.textPrimary,
+      fontWeight: '600',
+    },
+    actions: {
+      marginTop: 8,
+      flexDirection: 'row',
+      gap: 12,
+    },
+    button: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
+    buttonText: {
+      color: c.primary,
+      fontSize: 13,
+    },
+  });

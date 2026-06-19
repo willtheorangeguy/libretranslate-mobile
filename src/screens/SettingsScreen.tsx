@@ -18,6 +18,7 @@ import LanguageSelector from '../components/LanguageSelector';
 import { Language, ThemeMode } from '../types';
 import { TranslationService } from '../services/TranslationService';
 import { DEFAULT_TEXT_SIZE } from '../constants';
+import { useThemeColors, ThemeColors } from '../theme';
 
 const MIN_TEXT_SIZE = 12;
 const MAX_TEXT_SIZE = 24;
@@ -27,6 +28,8 @@ const themeModes: ThemeMode[] = ['system', 'light', 'dark'];
 export default function SettingsScreen() {
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const settings = useAppSelector(state => state.settings.settings);
 
   const [languages, setLanguages] = useState<Language[]>([]);
@@ -91,7 +94,7 @@ export default function SettingsScreen() {
           <Text style={styles.rowLabel}>Theme</Text>
           <Text style={styles.rowSubtext}>Current: {settings.themeMode}</Text>
         </View>
-        <MaterialIcons name="chevron-right" size={20} color="#666" />
+        <MaterialIcons name="chevron-right" size={20} color={colors.textSecondary} />
       </TouchableOpacity>
 
       <View style={styles.row}>
@@ -144,6 +147,7 @@ export default function SettingsScreen() {
           <Text style={styles.rowSubtext}>Use detection when source is Auto Detect</Text>
         </View>
         <Switch
+          trackColor={{ false: colors.border, true: colors.primary }}
           value={settings.enableAutoDetect}
           onValueChange={value => {
             saveSettings({ enableAutoDetect: value }).catch(error => {
@@ -187,7 +191,7 @@ export default function SettingsScreen() {
           <Text style={styles.rowLabel}>Manage LibreTranslate Servers</Text>
           <Text style={styles.rowSubtext}>Add, remove, and switch active server</Text>
         </View>
-        <MaterialIcons name="chevron-right" size={20} color="#666" />
+        <MaterialIcons name="chevron-right" size={20} color={colors.textSecondary} />
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.row} onPress={handleClearHistory}>
@@ -195,7 +199,7 @@ export default function SettingsScreen() {
           <Text style={styles.rowLabel}>Clear Translation History</Text>
           <Text style={styles.rowSubtext}>Removes history and favorites</Text>
         </View>
-        <MaterialIcons name="delete" size={20} color="#FF3B30" />
+        <MaterialIcons name="delete" size={20} color={colors.danger} />
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.row} onPress={handleResetOnboarding}>
@@ -203,7 +207,7 @@ export default function SettingsScreen() {
           <Text style={styles.rowLabel}>Replay Onboarding</Text>
           <Text style={styles.rowSubtext}>Show setup and help on next app start</Text>
         </View>
-        <MaterialIcons name="play-circle-outline" size={20} color="#007AFF" />
+        <MaterialIcons name="play-circle-outline" size={20} color={colors.primary} />
       </TouchableOpacity>
 
       <Text style={styles.helpText}>
@@ -214,74 +218,75 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  content: {
-    padding: 14,
-    gap: 12,
-  },
-  sectionTitle: {
-    color: '#333',
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 6,
-  },
-  row: {
-    backgroundColor: '#FFF',
-    borderWidth: 1,
-    borderColor: '#E6E6E6',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
-  },
-  rowLabel: {
-    fontSize: 15,
-    color: '#111',
-    fontWeight: '600',
-  },
-  rowSubtext: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-    maxWidth: 250,
-  },
-  languageRow: {
-    gap: 8,
-    backgroundColor: '#FFF',
-    borderWidth: 1,
-    borderColor: '#E6E6E6',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  textSizeControls: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  smallButton: {
-    borderWidth: 1,
-    borderColor: '#D4D4D4',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#FFF',
-  },
-  smallButtonText: {
-    color: '#222',
-    fontWeight: '600',
-    fontSize: 12,
-  },
-  helpText: {
-    marginTop: 8,
-    color: '#666',
-    fontSize: 12,
-    lineHeight: 18,
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    content: {
+      padding: 14,
+      gap: 12,
+    },
+    sectionTitle: {
+      color: c.textSecondary,
+      fontSize: 18,
+      fontWeight: '700',
+      marginTop: 6,
+    },
+    row: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.borderSubtle,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 8,
+    },
+    rowLabel: {
+      fontSize: 15,
+      color: c.textPrimary,
+      fontWeight: '600',
+    },
+    rowSubtext: {
+      fontSize: 12,
+      color: c.textSecondary,
+      marginTop: 2,
+      maxWidth: 250,
+    },
+    languageRow: {
+      gap: 8,
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.borderSubtle,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+    },
+    textSizeControls: {
+      flexDirection: 'row',
+      gap: 6,
+    },
+    smallButton: {
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      backgroundColor: c.surface,
+    },
+    smallButtonText: {
+      color: c.textPrimary,
+      fontWeight: '600',
+      fontSize: 12,
+    },
+    helpText: {
+      marginTop: 8,
+      color: c.textSecondary,
+      fontSize: 12,
+      lineHeight: 18,
+    },
+  });

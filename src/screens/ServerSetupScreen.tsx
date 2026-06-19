@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -16,9 +16,12 @@ import { addServer, removeServer, setActiveServer } from '../store/slices/server
 import { initializeClient } from '../services/LibreTranslateClient';
 import { ServerConfig } from '../types';
 import { StorageService } from '../services/StorageService';
+import { useThemeColors, ThemeColors } from '../theme';
 
 export default function ServerSetupScreen() {
   const navigation = useNavigation();
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [serverUrl, setServerUrl] = useState('http://localhost:5000');
   const [serverName, setServerName] = useState('Local Server');
   const [apiKey, setApiKey] = useState('');
@@ -159,7 +162,7 @@ export default function ServerSetupScreen() {
         <TextInput
           style={styles.input}
           placeholder="Server URL (e.g., http://localhost:5000)"
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textMuted}
           value={serverUrl}
           onChangeText={setServerUrl}
           editable={!loading}
@@ -171,7 +174,7 @@ export default function ServerSetupScreen() {
         <TextInput
           style={styles.input}
           placeholder="Server Name (optional)"
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textMuted}
           value={serverName}
           onChangeText={setServerName}
           editable={!loading}
@@ -180,7 +183,7 @@ export default function ServerSetupScreen() {
         <TextInput
           style={styles.input}
           placeholder="API Key (optional)"
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textMuted}
           value={apiKey}
           onChangeText={setApiKey}
           editable={!loading}
@@ -195,7 +198,7 @@ export default function ServerSetupScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#FFF" />
+            <ActivityIndicator color={colors.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Connect to Server</Text>
           )}
@@ -221,120 +224,121 @@ export default function ServerSetupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  contentContainer: {
-    padding: 20,
-  },
-  formSection: {
-    marginBottom: 30,
-  },
-  savedServersSection: {
-    marginTop: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 15,
-  },
-  input: {
-    backgroundColor: '#FFF',
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    marginBottom: 15,
-    fontSize: 16,
-    color: '#000',
-    borderWidth: 1,
-    borderColor: '#DDD',
-  },
-  button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingVertical: 14,
-    marginBottom: 15,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  helpText: {
-    color: '#666',
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  serverItem: {
-    backgroundColor: '#FFF',
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#EEE',
-  },
-  serverInfo: {
-    flex: 1,
-    marginRight: 10,
-  },
-  serverItemName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 5,
-  },
-  serverItemUrl: {
-    fontSize: 12,
-    color: '#666',
-  },
-  serverActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  selectButton: {
-    backgroundColor: '#34C759',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  selectButtonText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  deleteButton: {
-    backgroundColor: '#FF3B30',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  deleteButtonText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    contentContainer: {
+      padding: 20,
+    },
+    formSection: {
+      marginBottom: 30,
+    },
+    savedServersSection: {
+      marginTop: 20,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: c.textPrimary,
+      marginBottom: 10,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontSize: 16,
+      color: c.textSecondary,
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: c.textPrimary,
+      marginBottom: 15,
+    },
+    input: {
+      backgroundColor: c.surface,
+      borderRadius: 8,
+      paddingHorizontal: 15,
+      paddingVertical: 12,
+      marginBottom: 15,
+      fontSize: 16,
+      color: c.textPrimary,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    button: {
+      backgroundColor: c.primary,
+      borderRadius: 8,
+      paddingVertical: 14,
+      marginBottom: 15,
+      alignItems: 'center',
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    buttonText: {
+      color: c.onPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    helpText: {
+      color: c.textSecondary,
+      fontSize: 14,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+    serverItem: {
+      backgroundColor: c.surface,
+      borderRadius: 8,
+      padding: 15,
+      marginBottom: 12,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: c.borderSubtle,
+    },
+    serverInfo: {
+      flex: 1,
+      marginRight: 10,
+    },
+    serverItemName: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: c.textPrimary,
+      marginBottom: 5,
+    },
+    serverItemUrl: {
+      fontSize: 12,
+      color: c.textSecondary,
+    },
+    serverActions: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    selectButton: {
+      backgroundColor: c.success,
+      borderRadius: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    selectButtonText: {
+      color: c.onPrimary,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    deleteButton: {
+      backgroundColor: c.danger,
+      borderRadius: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    deleteButtonText: {
+      color: c.onPrimary,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+  });

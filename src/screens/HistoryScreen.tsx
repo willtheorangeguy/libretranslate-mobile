@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -15,11 +15,14 @@ import { DatabaseService } from '../services/DatabaseService';
 import { Translation } from '../types';
 import { useAppDispatch } from '../hooks/useRedux';
 import { setFavorites, setHistory } from '../store/slices/translationSlice';
+import { useThemeColors, ThemeColors } from '../theme';
 
 const formatDate = (timestamp: number): string => new Date(timestamp).toLocaleString();
 
 export default function HistoryScreen() {
   const dispatch = useAppDispatch();
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [history, setHistoryState] = useState<Translation[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -95,7 +98,7 @@ export default function HistoryScreen() {
           <MaterialIcons
             name={item.isFavorite ? 'favorite' : 'favorite-border'}
             size={18}
-            color={item.isFavorite ? '#FF3B30' : '#555'}
+            color={item.isFavorite ? colors.danger : colors.textSecondary}
           />
           <Text style={styles.actionText}>{item.isFavorite ? 'Favorited' : 'Favorite'}</Text>
         </TouchableOpacity>
@@ -109,6 +112,7 @@ export default function HistoryScreen() {
         <TextInput
           accessibilityLabel="Search translation history"
           placeholder="Search history..."
+          placeholderTextColor={colors.textMuted}
           value={search}
           onChangeText={setSearch}
           onSubmitEditing={() => {
@@ -124,7 +128,7 @@ export default function HistoryScreen() {
           style={styles.toolbarButton}
           onPress={handleExport}
         >
-          <MaterialIcons name="share" size={20} color="#007AFF" />
+          <MaterialIcons name="share" size={20} color={colors.primary} />
         </TouchableOpacity>
         <TouchableOpacity
           accessibilityRole="button"
@@ -132,13 +136,13 @@ export default function HistoryScreen() {
           style={styles.toolbarButton}
           onPress={handleClearHistory}
         >
-          <MaterialIcons name="delete" size={20} color="#FF3B30" />
+          <MaterialIcons name="delete" size={20} color={colors.danger} />
         </TouchableOpacity>
       </View>
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <FlatList
@@ -153,90 +157,91 @@ export default function HistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-    padding: 12,
-  },
-  toolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
-  },
-  searchInput: {
-    flex: 1,
-    backgroundColor: '#FFF',
-    borderColor: '#DDD',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    color: '#000',
-  },
-  toolbarButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: '#FFF',
-    borderColor: '#DDD',
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: '#777',
-    fontSize: 16,
-  },
-  card: {
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 10,
-    borderColor: '#ECECEC',
-    borderWidth: 1,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  languageTag: {
-    fontSize: 12,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  date: {
-    fontSize: 11,
-    color: '#777',
-  },
-  source: {
-    color: '#222',
-    fontSize: 15,
-    marginBottom: 6,
-  },
-  target: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  actionsRow: {
-    marginTop: 8,
-    flexDirection: 'row',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  actionText: {
-    color: '#555',
-    fontSize: 13,
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+      padding: 12,
+    },
+    toolbar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 10,
+    },
+    searchInput: {
+      flex: 1,
+      backgroundColor: c.surface,
+      borderColor: c.border,
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      color: c.textPrimary,
+    },
+    toolbarButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 8,
+      backgroundColor: c.surface,
+      borderColor: c.border,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    emptyText: {
+      color: c.textSecondary,
+      fontSize: 16,
+    },
+    card: {
+      backgroundColor: c.surface,
+      borderRadius: 10,
+      padding: 12,
+      marginBottom: 10,
+      borderColor: c.borderSubtle,
+      borderWidth: 1,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 6,
+    },
+    languageTag: {
+      fontSize: 12,
+      color: c.primary,
+      fontWeight: '600',
+    },
+    date: {
+      fontSize: 11,
+      color: c.textSecondary,
+    },
+    source: {
+      color: c.textSecondary,
+      fontSize: 15,
+      marginBottom: 6,
+    },
+    target: {
+      color: c.textPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    actionsRow: {
+      marginTop: 8,
+      flexDirection: 'row',
+    },
+    actionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    actionText: {
+      color: c.textSecondary,
+      fontSize: 13,
+    },
+  });

@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { StackScreenProps } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { StorageService } from '../services/StorageService';
+import { useThemeColors, ThemeColors } from '../theme';
 
 type Props = StackScreenProps<RootStackParamList, 'Onboarding'>;
 
 export default function OnboardingScreen({ navigation }: Props) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const handleContinue = async () => {
     await StorageService.setOnboardingComplete(true);
     const settings = await StorageService.getSettings();
@@ -41,41 +45,42 @@ export default function OnboardingScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: '#000',
-    marginBottom: 16,
-  },
-  body: {
-    fontSize: 16,
-    color: '#333',
-    lineHeight: 22,
-    marginBottom: 18,
-  },
-  points: {
-    fontSize: 15,
-    color: '#444',
-    lineHeight: 21,
-    marginBottom: 8,
-  },
-  button: {
-    marginTop: 28,
-    backgroundColor: '#007AFF',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+    },
+    title: {
+      fontSize: 30,
+      fontWeight: '700',
+      color: c.textPrimary,
+      marginBottom: 16,
+    },
+    body: {
+      fontSize: 16,
+      color: c.textSecondary,
+      lineHeight: 22,
+      marginBottom: 18,
+    },
+    points: {
+      fontSize: 15,
+      color: c.textSecondary,
+      lineHeight: 21,
+      marginBottom: 8,
+    },
+    button: {
+      marginTop: 28,
+      backgroundColor: c.primary,
+      paddingVertical: 14,
+      borderRadius: 10,
+      alignItems: 'center',
+    },
+    buttonText: {
+      color: c.onPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  });

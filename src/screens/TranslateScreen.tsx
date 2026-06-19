@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -24,11 +24,14 @@ import { SpeechService } from '../services/SpeechService';
 import { Language, Translation } from '../types';
 import LanguageSelector from '../components/LanguageSelector';
 import { UI_CONSTANTS } from '../constants';
+import { useThemeColors, ThemeColors } from '../theme';
 
 const DEBOUNCE_MS = 500;
 
 export default function TranslateScreen() {
   const dispatch = useAppDispatch();
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const settings = useAppSelector(state => state.settings.settings);
   const { loading } = useAppSelector(state => state.translation);
 
@@ -269,7 +272,7 @@ export default function TranslateScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
         {loadingLanguages ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading languages...</Text>
           </View>
         ) : (
@@ -287,7 +290,7 @@ export default function TranslateScreen() {
                 style={styles.swapButton}
                 onPress={handleSwapLanguages}
               >
-                <MaterialIcons name="swap-horiz" size={24} color="#007AFF" />
+                <MaterialIcons name="swap-horiz" size={24} color={colors.primary} />
               </TouchableOpacity>
               <LanguageSelector
                 languages={languages}
@@ -313,7 +316,7 @@ export default function TranslateScreen() {
                 accessibilityLabel="Source text input"
                 style={textAreaStyle}
                 placeholder="Enter text to translate..."
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
                 value={sourceText}
                 onChangeText={handleSourceTextChange}
                 multiline
@@ -329,7 +332,7 @@ export default function TranslateScreen() {
                   onPress={() => handleCopyText(sourceText)}
                   disabled={!sourceText}
                 >
-                  <MaterialIcons name="content-copy" size={18} color="#007AFF" />
+                  <MaterialIcons name="content-copy" size={18} color={colors.primary} />
                   <Text style={styles.iconButtonText}>Copy</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -338,7 +341,7 @@ export default function TranslateScreen() {
                   style={styles.iconButton}
                   onPress={handleSpeechToText}
                 >
-                  <MaterialIcons name={isListening ? 'mic-off' : 'mic'} size={18} color="#007AFF" />
+                  <MaterialIcons name={isListening ? 'mic-off' : 'mic'} size={18} color={colors.primary} />
                   <Text style={styles.iconButtonText}>{isListening ? 'Stop Mic' : 'Voice'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -347,7 +350,7 @@ export default function TranslateScreen() {
                   style={styles.iconButton}
                   onPress={handleClearAll}
                 >
-                  <MaterialIcons name="clear" size={18} color="#FF3B30" />
+                  <MaterialIcons name="clear" size={18} color={colors.danger} />
                   <Text style={styles.iconButtonText}>Clear</Text>
                 </TouchableOpacity>
               </View>
@@ -356,12 +359,12 @@ export default function TranslateScreen() {
             <View style={styles.section}>
               <View style={styles.textAreaHeader}>
                 <Text style={styles.label}>Translation</Text>
-                {loading && <ActivityIndicator color="#007AFF" size="small" />}
+                {loading && <ActivityIndicator color={colors.primary} size="small" />}
               </View>
 
               {translationError ? (
                 <View style={styles.errorBox}>
-                  <MaterialIcons name="error-outline" size={18} color="#FF3B30" />
+                  <MaterialIcons name="error-outline" size={18} color={colors.danger} />
                   <Text style={styles.errorText}>{translationError}</Text>
                 </View>
               ) : null}
@@ -370,7 +373,7 @@ export default function TranslateScreen() {
                 accessibilityLabel="Translated text output"
                 style={textAreaStyle}
                 placeholder="Translation will appear here..."
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
                 value={translatedText}
                 editable={false}
                 multiline
@@ -383,7 +386,7 @@ export default function TranslateScreen() {
                   onPress={() => handleCopyText(translatedText)}
                   disabled={!translatedText}
                 >
-                  <MaterialIcons name="content-copy" size={18} color="#007AFF" />
+                  <MaterialIcons name="content-copy" size={18} color={colors.primary} />
                   <Text style={styles.iconButtonText}>Copy</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -393,7 +396,7 @@ export default function TranslateScreen() {
                   onPress={handleSpeakTranslation}
                   disabled={!translatedText}
                 >
-                  <MaterialIcons name="volume-up" size={18} color="#007AFF" />
+                  <MaterialIcons name="volume-up" size={18} color={colors.primary} />
                   <Text style={styles.iconButtonText}>Speak</Text>
                 </TouchableOpacity>
               </View>
@@ -405,105 +408,106 @@ export default function TranslateScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: 15,
-  },
-  loadingContainer: {
-    minHeight: 400,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 10,
-    color: '#666',
-    fontSize: 16,
-  },
-  languageRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 20,
-  },
-  swapButton: {
-    backgroundColor: '#FFF',
-    borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 8,
-    padding: 10,
-  },
-  section: {
-    marginBottom: 20,
-  },
-  textAreaHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-  },
-  charCount: {
-    fontSize: 12,
-    color: '#666',
-  },
-  charCountError: {
-    color: '#FF3B30',
-  },
-  textInput: {
-    backgroundColor: '#FFF',
-    borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: '#000',
-    textAlignVertical: 'top',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
-  },
-  iconButton: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 6,
-    paddingVertical: 8,
-    gap: 6,
-  },
-  iconButtonText: {
-    fontSize: 13,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  errorBox: {
-    backgroundColor: '#FFE5E5',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  errorText: {
-    color: '#FF3B30',
-    fontSize: 14,
-    flex: 1,
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    contentContainer: {
+      padding: 15,
+    },
+    loadingContainer: {
+      minHeight: 400,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      marginTop: 10,
+      color: c.textSecondary,
+      fontSize: 16,
+    },
+    languageRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 20,
+    },
+    swapButton: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 8,
+      padding: 10,
+    },
+    section: {
+      marginBottom: 20,
+    },
+    textAreaHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: c.textPrimary,
+    },
+    charCount: {
+      fontSize: 12,
+      color: c.textSecondary,
+    },
+    charCountError: {
+      color: c.danger,
+    },
+    textInput: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      color: c.textPrimary,
+      textAlignVertical: 'top',
+    },
+    buttonRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 10,
+    },
+    iconButton: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 6,
+      paddingVertical: 8,
+      gap: 6,
+    },
+    iconButtonText: {
+      fontSize: 13,
+      color: c.primary,
+      fontWeight: '500',
+    },
+    errorBox: {
+      backgroundColor: c.errorSurface,
+      borderRadius: 8,
+      padding: 10,
+      marginBottom: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    errorText: {
+      color: c.errorText,
+      fontSize: 14,
+      flex: 1,
+    },
+  });

@@ -1,7 +1,12 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import {
+  NavigationContainer,
+  DefaultTheme,
+  DarkTheme,
+} from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAppDispatch } from '../hooks/useRedux';
+import { useThemeColors } from '../theme';
 import { setServers, setActiveServer } from '../store/slices/serverSlice';
 import { setSettings } from '../store/slices/settingsSlice';
 import { RootStackParamList } from '../types';
@@ -16,9 +21,25 @@ const Stack = createStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
   const dispatch = useAppDispatch();
+  const colors = useThemeColors();
   const [isLoading, setIsLoading] = useState(true);
   const [hasServers, setHasServers] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+
+  const navTheme = useMemo(() => {
+    const base = colors.isDark ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        primary: colors.primary,
+        background: colors.background,
+        card: colors.surface,
+        text: colors.textPrimary,
+        border: colors.borderSubtle,
+      },
+    };
+  }, [colors]);
 
   const loadStoredData = useCallback(async () => {
     try {
@@ -70,7 +91,7 @@ export default function AppNavigator() {
       : 'ServerSetup';
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navTheme}>
       <Stack.Navigator
         key={initialRouteName}
         initialRouteName={initialRouteName}

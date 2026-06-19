@@ -1,19 +1,20 @@
 import React from 'react';
-import { StatusBar, useColorScheme } from 'react-native';
+import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import { store } from './src/store';
 import AppNavigator from './src/navigation/AppNavigator';
-import { useAppSelector } from './src/hooks/useRedux';
+import { useThemeColors } from './src/theme';
 
 function AppShell() {
-  const systemDark = useColorScheme() === 'dark';
-  const themeMode = useAppSelector(state => state.settings.settings.themeMode);
-  const isDarkMode = themeMode === 'dark' || (themeMode === 'system' && systemDark);
+  const colors = useThemeColors();
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <StatusBar
+        barStyle={colors.statusBarStyle}
+        backgroundColor={colors.background}
+      />
       <AppNavigator />
     </SafeAreaProvider>
   );

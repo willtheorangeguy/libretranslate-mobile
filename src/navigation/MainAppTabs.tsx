@@ -6,18 +6,26 @@ import HistoryScreen from '../screens/HistoryScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useThemeColors } from '../theme';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 type MaterialIconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
 export default function MainAppTabs() {
+  const colors = useThemeColors();
   const tabScreensOptions = useMemo(
     () => ({
-      tabBarActiveTintColor: '#007AFF',
-      tabBarInactiveTintColor: '#8E8E93',
+      tabBarActiveTintColor: colors.primary,
+      tabBarInactiveTintColor: colors.tabInactive,
+      tabBarStyle: {
+        backgroundColor: colors.surface,
+        borderTopColor: colors.borderSubtle,
+      },
+      headerStyle: { backgroundColor: colors.surface },
+      headerTintColor: colors.textPrimary,
       headerShown: true,
     }),
-    []
+    [colors]
   );
 
   const getTabIcon = (

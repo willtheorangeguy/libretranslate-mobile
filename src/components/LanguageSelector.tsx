@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Language } from '../types';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useThemeColors, ThemeColors } from '../theme';
 
 interface Props {
   languages: Language[];
@@ -17,8 +18,16 @@ interface Props {
   placeholder?: string;
 }
 
-function Separator() {
-  return <View style={styles.separator} />;
+function LanguageDivider() {
+  const colors = useThemeColors();
+  const dividerStyles = useMemo(
+    () =>
+      StyleSheet.create({
+        line: { height: 1, backgroundColor: colors.borderSubtle },
+      }),
+    [colors]
+  );
+  return <View style={dividerStyles.line} />;
 }
 
 export default function LanguageSelector({
@@ -27,6 +36,8 @@ export default function LanguageSelector({
   onSelect,
   placeholder = 'Select language',
 }: Props) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [showModal, setShowModal] = useState(false);
   const selectedLanguage = languages.find(lang => lang.code === selectedLang);
   const displayName = selectedLanguage?.name || placeholder;
@@ -53,7 +64,7 @@ export default function LanguageSelector({
         {item.name}
       </Text>
       {selectedLang === item.code && (
-        <MaterialIcons name="check" size={20} color="#007AFF" />
+        <MaterialIcons name="check" size={20} color={colors.primary} />
       )}
     </TouchableOpacity>
   );
@@ -69,7 +80,7 @@ export default function LanguageSelector({
         <Text style={styles.selectorText} numberOfLines={1}>
           {displayName}
         </Text>
-        <MaterialIcons name="expand-more" size={20} color="#007AFF" />
+        <MaterialIcons name="expand-more" size={20} color={colors.primary} />
       </TouchableOpacity>
 
       <Modal
@@ -83,7 +94,7 @@ export default function LanguageSelector({
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Language</Text>
               <TouchableOpacity onPress={() => setShowModal(false)}>
-                <MaterialIcons name="close" size={24} color="#000" />
+                <MaterialIcons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
 
@@ -91,7 +102,7 @@ export default function LanguageSelector({
               data={languages}
               keyExtractor={item => item.code}
               renderItem={renderLanguageItem}
-              ItemSeparatorComponent={Separator}
+              ItemSeparatorComponent={LanguageDivider}
             />
           </View>
         </View>
@@ -100,73 +111,70 @@ export default function LanguageSelector({
   );
 }
 
-const styles = StyleSheet.create({
-  selector: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#FFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#DDD',
-  },
-  selectorText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-    marginRight: 6,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modal: {
-    backgroundColor: '#FFF',
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    maxHeight: '80%',
-    paddingBottom: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-  },
-  languageItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  languageItemSelected: {
-    backgroundColor: '#E5F0FF',
-  },
-  languageItemText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#000',
-  },
-  languageItemTextSelected: {
-    fontWeight: '600',
-    color: '#007AFF',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#F0F0F0',
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    selector: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      backgroundColor: c.surface,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    selectorText: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '600',
+      color: c.textPrimary,
+      marginRight: 6,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: c.overlay,
+      justifyContent: 'flex-end',
+    },
+    modal: {
+      backgroundColor: c.surface,
+      borderTopLeftRadius: 12,
+      borderTopRightRadius: 12,
+      maxHeight: '80%',
+      paddingBottom: 20,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: c.borderSubtle,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: c.textPrimary,
+    },
+    languageItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    languageItemSelected: {
+      backgroundColor: c.surfaceAlt,
+    },
+    languageItemText: {
+      flex: 1,
+      fontSize: 16,
+      color: c.textPrimary,
+    },
+    languageItemTextSelected: {
+      fontWeight: '600',
+      color: c.primary,
+    },
+  });
