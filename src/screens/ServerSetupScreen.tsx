@@ -21,6 +21,7 @@ export default function ServerSetupScreen() {
   const navigation = useNavigation();
   const [serverUrl, setServerUrl] = useState('http://localhost:5000');
   const [serverName, setServerName] = useState('Local Server');
+  const [apiKey, setApiKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [savedServers, setSavedServers] = useState<ServerConfig[]>([]);
   const dispatch = useAppDispatch();
@@ -51,7 +52,8 @@ export default function ServerSetupScreen() {
         return;
       }
 
-      const client = initializeClient(normalizedUrl);
+      const trimmedKey = apiKey.trim();
+      const client = initializeClient(normalizedUrl, trimmedKey || undefined);
       const isValid = await client.validateConnection();
 
       if (!isValid) {
@@ -68,6 +70,7 @@ export default function ServerSetupScreen() {
         name: serverName || 'LibreTranslate Server',
         isActive: true,
         lastValidated: Date.now(),
+        apiKey: trimmedKey || undefined,
       };
 
       dispatch(addServer(newServer));
@@ -81,6 +84,7 @@ export default function ServerSetupScreen() {
       Alert.alert('Success', 'Server configured successfully!');
       setServerUrl('');
       setServerName('');
+      setApiKey('');
       navigation.reset({
         index: 0,
         routes: [{ name: 'MainApp' as never }],
@@ -94,7 +98,7 @@ export default function ServerSetupScreen() {
 
   const handleSelectServer = (server: ServerConfig) => {
     dispatch(setActiveServer(server));
-    initializeClient(server.url);
+    initializeClient(server.url, server.apiKey);
     StorageService.setActiveServer(server);
     navigation.reset({
       index: 0,
@@ -159,6 +163,9 @@ export default function ServerSetupScreen() {
           value={serverUrl}
           onChangeText={setServerUrl}
           editable={!loading}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
         />
 
         <TextInput
@@ -168,6 +175,18 @@ export default function ServerSetupScreen() {
           value={serverName}
           onChangeText={setServerName}
           editable={!loading}
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="API Key (optional)"
+          placeholderTextColor="#999"
+          value={apiKey}
+          onChangeText={setApiKey}
+          editable={!loading}
+          autoCapitalize="none"
+          autoCorrect={false}
+          secureTextEntry
         />
 
         <TouchableOpacity

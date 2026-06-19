@@ -25,6 +25,7 @@ export interface ServerConfig {
   isActive: boolean;
   lastValidated?: number;
   name?: string;
+  apiKey?: string;
 }
 
 export interface Translation {

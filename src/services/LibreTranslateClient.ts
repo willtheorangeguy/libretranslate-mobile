@@ -4,13 +4,19 @@ import { Language, TranslationResponse, DetectionResponse } from '../types';
 export class LibreTranslateClient {
   private axiosInstance: AxiosInstance;
   private baseURL: string;
+  private apiKey?: string;
 
-  constructor(baseURL: string) {
+  constructor(baseURL: string, apiKey?: string) {
     this.baseURL = baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL;
+    this.apiKey = apiKey?.trim() || undefined;
     this.axiosInstance = axios.create({
       baseURL: this.baseURL,
       timeout: 10000,
     });
+  }
+
+  private withApiKey<T extends object>(payload: T): T & { api_key?: string } {
+    return this.apiKey ? { ...payload, api_key: this.apiKey } : payload;
   }
 
   async validateConnection(): Promise<boolean> {
@@ -39,11 +45,11 @@ export class LibreTranslateClient {
     try {
       const response = await this.axiosInstance.post<TranslationResponse>(
         '/translate',
-        {
+        this.withApiKey({
           q: text,
           source,
           target,
-        }
+        })
       );
       return response.data;
     } catch (error) {
@@ -55,7 +61,7 @@ export class LibreTranslateClient {
     try {
       const response = await this.axiosInstance.post<DetectionResponse>(
         '/detect',
-        { q: text }
+        this.withApiKey({ q: text })
       );
       return response.data;
     } catch (error) {
@@ -80,8 +86,9 @@ export class LibreTranslateClient {
     return new Error('An unexpected error occurred');
   }
 
-  updateBaseURL(newURL: string): void {
+  updateBaseURL(newURL: string, apiKey?: string): void {
     this.baseURL = newURL.endsWith('/') ? newURL.slice(0, -1) : newURL;
+    this.apiKey = apiKey?.trim() || undefined;
     this.axiosInstance = axios.create({
       baseURL: this.baseURL,
       timeout: 10000,
@@ -91,8 +98,11 @@ export class LibreTranslateClient {
 
 let clientInstance: LibreTranslateClient | null = null;
 
-export const initializeClient = (baseURL: string): LibreTranslateClient => {
-  clientInstance = new LibreTranslateClient(baseURL);
+export const initializeClient = (
+  baseURL: string,
+  apiKey?: string
+): LibreTranslateClient => {
+  clientInstance = new LibreTranslateClient(baseURL, apiKey);
   return clientInstance;
 };
 

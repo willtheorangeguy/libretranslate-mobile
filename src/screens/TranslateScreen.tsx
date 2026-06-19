@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,6 +10,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -42,6 +43,9 @@ export default function TranslateScreen() {
     null
   );
   const [isListening, setIsListening] = useState(false);
+  // One history row per editing session: reused while the user keeps typing,
+  // reset when the input is cleared/swapped so partial drafts don't flood history.
+  const sessionIdRef = useRef<string | null>(null);
 
   const loadLanguages = useCallback(async () => {
     try {
@@ -118,6 +122,7 @@ export default function TranslateScreen() {
       if (!text.trim()) {
         setTranslatedText('');
         setTranslationError(null);
+        sessionIdRef.current = null;
         return;
       }
 
@@ -133,8 +138,12 @@ export default function TranslateScreen() {
         const result = await TranslationService.translate(text, resolvedSource, targetLang);
         setTranslatedText(result);
 
+        if (!sessionIdRef.current) {
+          sessionIdRef.current = `${Date.now()}`;
+        }
+
         const translation: Translation = {
-          id: `${Date.now()}`,
+          id: sessionIdRef.current,
           sourceText: text,
           translatedText: result,
           sourceLang: resolvedSource,
@@ -182,6 +191,7 @@ export default function TranslateScreen() {
     setTargetLang(sourceLang);
     setSourceText(translatedText);
     setTranslatedText(sourceText);
+    sessionIdRef.current = null;
   };
 
   const handleCopyText = (text: string) => {
@@ -193,6 +203,23 @@ export default function TranslateScreen() {
     setSourceText('');
     setTranslatedText('');
     setTranslationError(null);
+    sessionIdRef.current = null;
+  };
+
+  const ensureMicPermission = async (): Promise<boolean> => {
+    if (Platform.OS !== 'android') {
+      return true;
+    }
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+      {
+        title: 'Microphone permission',
+        message: 'Voice input needs access to your microphone.',
+        buttonPositive: 'OK',
+        buttonNegative: 'Cancel',
+      }
+    );
+    return granted === PermissionsAndroid.RESULTS.GRANTED;
   };
 
   const handleSpeechToText = async () => {
@@ -200,6 +227,14 @@ export default function TranslateScreen() {
       if (isListening) {
         await SpeechService.stopListening();
         setIsListening(false);
+        return;
+      }
+      const allowed = await ensureMicPermission();
+      if (!allowed) {
+        Alert.alert(
+          'Microphone permission required',
+          'Enable microphone access in settings to use voice input.'
+        );
         return;
       }
       await SpeechService.startListening(sourceLang);

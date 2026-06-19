@@ -33,11 +33,11 @@ export default function AppNavigator() {
         if (activeServer) {
           dispatch(setActiveServer(activeServer));
           // Initialize client with active server
-          initializeClient(activeServer.url);
+          initializeClient(activeServer.url, activeServer.apiKey);
         } else {
           // Initialize with first server if no active server
           dispatch(setActiveServer(servers[0]));
-          initializeClient(servers[0].url);
+          initializeClient(servers[0].url, servers[0].apiKey);
         }
         setHasServers(true);
       }
