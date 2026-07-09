@@ -10,6 +10,7 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch } from '../hooks/useRedux';
 import { addServer, removeServer, setActiveServer } from '../store/slices/serverSlice';
@@ -154,8 +155,9 @@ export default function ServerSetupScreen() {
   );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <Text style={styles.title}>LibreTranslate Setup</Text>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        <Text style={styles.title}>LibreTranslate Setup</Text>
       <Text style={styles.subtitle}>Add a LibreTranslate server</Text>
 
       <View style={styles.formSection}>
@@ -220,12 +222,17 @@ export default function ServerSetupScreen() {
           />
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
     container: {
       flex: 1,
       backgroundColor: c.background,

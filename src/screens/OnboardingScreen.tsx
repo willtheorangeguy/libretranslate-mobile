@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackScreenProps } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { StorageService } from '../services/StorageService';
@@ -22,8 +23,9 @@ export default function OnboardingScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome to LibreTranslate Mobile</Text>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <View style={styles.container}>
+        <Text style={styles.title}>Welcome to LibreTranslate Mobile</Text>
       <Text style={styles.body}>
         Connect your self-hosted LibreTranslate server, translate by text or voice, and keep a
         local searchable history.
@@ -41,12 +43,17 @@ export default function OnboardingScreen({ navigation }: Props) {
       >
         <Text style={styles.buttonText}>Get Started</Text>
       </TouchableOpacity>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
     container: {
       flex: 1,
       backgroundColor: c.background,

@@ -1,4 +1,7 @@
 {
   "name": "LibreTranslateApp",
-  "displayName": "LibreTranslate Mobile"
+  "displayName": "LibreTranslate Mobile",
+  "plugins": [
+    "expo-asset"
+  ]
 }
