@@ -4,7 +4,7 @@ React Native and TypeScript, with a service layer deliberately kept out of the c
 
 ## The shape
 
-```
+```text
 App.tsx
   └── AppNavigator            onboarding → server setup → main tabs
         └── MainAppTabs       Translate · History · Favorites · Settings

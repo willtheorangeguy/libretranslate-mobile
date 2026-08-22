@@ -15,7 +15,7 @@ That is the whole surface. If your instance serves those three, the app works.
 
 ## Requests
 
-**Translate**
+### Translate
 
 ```json
 POST /translate
@@ -24,7 +24,7 @@ POST /translate
 
 Response: `{ "translatedText": "Bonjour" }`
 
-**Detect**
+### Detect
 
 ```json
 POST /detect
@@ -33,9 +33,9 @@ POST /detect
 
 Response: an array; the app takes `[0].language`, falling back to `"unknown"`.
 
-**Languages**
+### Languages
 
-```
+```text
 GET /languages
 ```
 

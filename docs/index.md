@@ -3,7 +3,7 @@
 An iOS-first React Native client for a self-hosted LibreTranslate server. Translation, speech,
 and a local history database, with nothing leaving the server you choose.
 
-```
+```text
 libretranslate-mobile/
 ├── docs/
 │   ├── README.md          this page

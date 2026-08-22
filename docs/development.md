@@ -18,7 +18,7 @@
 
 ## Layout
 
-```
+```text
 src/
 ├── screens/       Onboarding, ServerSetup, Translate, History, Favorites, Settings
 ├── components/    LanguageSelector

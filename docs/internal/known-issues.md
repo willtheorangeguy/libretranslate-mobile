@@ -7,12 +7,11 @@ licensing decision rather than a documentation one.
 Ordered by severity. See [`docs/roadmap.md`](../roadmap.md) for the narrative version,
 which also covers deliberate non-goals.
 
-
 **8 open:** 2 high, 4 medium, 2 low.
 
 ## 1. Clearing history deletes favourites too
 
-**Severity:** High  
+**Severity:** High
 **Where:** `src/services/DatabaseService.ts` -> `clearHistory`, called from `HistoryScreen` and `SettingsScreen`
 
 **What:** Favourites are not a separate table -- they are rows in `translations` with `is_favorite = 1`. `clearHistory` runs `DELETE FROM translations;`, which removes them along with everything else. Neither confirmation dialog mentions favourites.
@@ -23,7 +22,7 @@ which also covers deliberate non-goals.
 
 ## 2. History export silently omits everything past the newest 100 rows
 
-**Severity:** High  
+**Severity:** High
 **Where:** `src/services/DatabaseService.ts` -> `exportHistory` calls `getHistory`
 
 **What:** `getHistory` applies `LIMIT UI_CONSTANTS.MAX_HISTORY_ITEMS` (100). `exportHistory` calls it with no arguments, so the exported JSON contains at most 100 entries regardless of how many the database holds. The file is presented as the translation history.
@@ -34,7 +33,7 @@ which also covers deliberate non-goals.
 
 ## 3. Nothing prunes the translations table, so old rows accumulate unreachable
 
-**Severity:** Medium  
+**Severity:** Medium
 **Where:** `src/services/DatabaseService.ts` -> `saveTranslation`, `getHistory`
 
 **What:** `MAX_HISTORY_ITEMS` and `MAX_FAVORITES_ITEMS` are applied as SQL `LIMIT` clauses when reading. Nothing applies them when writing, and there is no retention policy or cleanup. Rows past the hundredth stay in the database permanently but are not reachable through any screen.
@@ -45,7 +44,7 @@ which also covers deliberate non-goals.
 
 ## 4. Server error responses are discarded, leaving unexplainable failures
 
-**Severity:** Medium  
+**Severity:** Medium
 **Where:** `src/services/LibreTranslateClient.ts` -> `handleError`
 
 **What:** The handler maps `ECONNABORTED`, 404, and 503 to friendly messages and falls through to `axiosError.message` for everything else. LibreTranslate returns a JSON body of the form `{"error": "..."}` explaining the refusal -- invalid API key, character limit exceeded, unsupported language pair, rate limit -- and `error.response.data` is never read.
@@ -56,7 +55,7 @@ which also covers deliberate non-goals.
 
 ## 5. Speech falls back to US English for any language outside an eleven-entry table
 
-**Severity:** Medium  
+**Severity:** Medium
 **Where:** `src/services/SpeechService.ts` -> `LANGUAGE_TO_LOCALE`, `toLocale`
 
 **What:** `toLocale` looks the language code up in a hardcoded map of eleven languages and returns `en-US` for anything absent. Both `startListening` and speech output use it. The server's language list is typically much longer than eleven.
@@ -67,7 +66,7 @@ which also covers deliberate non-goals.
 
 ## 6. The API key is stored unencrypted in AsyncStorage
 
-**Severity:** Medium  
+**Severity:** Medium
 **Where:** `src/screens/ServerSetupScreen.tsx`, `src/services/StorageService.ts`, `src/types/index.ts`
 
 **What:** `ServerConfig.apiKey` is persisted as part of the server record via AsyncStorage, which is plain unencrypted files in the app container. iOS provides the Keychain for exactly this.
@@ -78,7 +77,7 @@ which also covers deliberate non-goals.
 
 ## 7. Connection validation does not exercise the API key
 
-**Severity:** Low  
+**Severity:** Low
 **Where:** `src/services/LibreTranslateClient.ts` -> `validateConnection`, `withApiKey`
 
 **What:** `validateConnection` issues `GET /languages`, and `withApiKey` is applied only to the translate and detect bodies. Most instances serve `/languages` without authentication, so a wrong or missing key passes setup.
@@ -89,7 +88,7 @@ which also covers deliberate non-goals.
 
 ## 8. API_TIMEOUTS is defined but never used
 
-**Severity:** Low  
+**Severity:** Low
 **Where:** `src/constants/index.ts`, `src/services/LibreTranslateClient.ts`
 
 **What:** `API_TIMEOUTS` specifies `TRANSLATE: 10000`, `DETECT: 5000`, `LANGUAGES: 5000`. The axios instance is created with a flat `timeout: 10000` in both the constructor and `updateBaseURL`, and the constant is imported nowhere.
@@ -97,7 +96,6 @@ which also covers deliberate non-goals.
 **Why it matters:** The constants file reads as the place timeouts are configured, so someone tuning detection will edit `DETECT` and see no change -- the shortest kind of wasted afternoon. It also means the fast endpoints wait twice as long as intended before giving up.
 
 **Suggested fix:** Pass a per-request timeout from `API_TIMEOUTS` on each call, or delete the constant and put the 10s value where it is actually read.
-
 
 ---
 
