@@ -4,7 +4,7 @@
 
 | For | You need |
 |---|---|
-| Building and running | macOS with Xcode |
+| Building and running | macOS with Xcode 16.1 or newer |
 | Translating | A LibreTranslate server you can reach |
 | Dependencies | Node, and CocoaPods for the iOS native modules |
 
@@ -17,6 +17,9 @@ and App Store artifacts are all built around iOS.
 git clone https://github.com/willtheorangeguy/libretranslate-mobile.git
 cd libretranslate-mobile
 npm install
+cd ios
+pod install
+cd ..
 ```
 
 Several dependencies have native modules — SQLite, speech recognition, text-to-speech, and
@@ -42,8 +45,10 @@ Signing and CI configuration live in `.github/workflows/ios-ci.yml`.
 
 | Module | Provides |
 |---|---|
+| `@react-native-documents/picker` | File selection |
+| `@react-native-vector-icons/material-icons` / `material-design-icons` | Bundled icon fonts |
 | `react-native-sqlite-storage` | The local history database |
-| `@react-native-community/voice` | Speech-to-text |
+| `@react-native-voice/voice` | Speech-to-text |
 | `react-native-tts` | Text-to-speech |
 | `@react-native-clipboard/clipboard` | Copy and paste |
 

@@ -1,15 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Text,
-  Switch,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-} from 'react-native';
+import { View, StyleSheet, Text, Switch, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons } from '@react-native-vector-icons/material-icons/static';
 import { useAppDispatch, useAppSelector } from '../hooks/useRedux';
 import { updateSettings } from '../store/slices/settingsSlice';
 import { StorageService } from '../services/StorageService';
@@ -109,7 +101,7 @@ export default function SettingsScreen() {
               saveSettings({ textSize: Math.max(MIN_TEXT_SIZE, settings.textSize - 1) }).catch(
                 error => {
                   console.error('Failed to reduce text size:', error);
-                }
+                },
               )
             }
           >
@@ -121,7 +113,7 @@ export default function SettingsScreen() {
               saveSettings({ textSize: Math.min(MAX_TEXT_SIZE, settings.textSize + 1) }).catch(
                 error => {
                   console.error('Failed to increase text size:', error);
-                }
+                },
               )
             }
           >
@@ -160,7 +152,7 @@ export default function SettingsScreen() {
       <View style={styles.languageRow}>
         <Text style={styles.rowLabel}>Default Source</Text>
         <LanguageSelector
-          languages={languages}
+          languages={[{ code: 'auto', name: 'Auto Detect' }, ...languages]}
           selectedLang={settings.defaultSourceLang}
           onSelect={lang => {
             saveSettings({ defaultSourceLang: lang }).catch(error => {

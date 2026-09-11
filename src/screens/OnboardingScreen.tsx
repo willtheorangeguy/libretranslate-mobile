@@ -26,23 +26,24 @@ export default function OnboardingScreen({ navigation }: Props) {
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <View style={styles.container}>
         <Text style={styles.title}>Welcome to LibreTranslate Mobile</Text>
-      <Text style={styles.body}>
-        Connect your self-hosted LibreTranslate server, translate by text or voice, and keep a
-        local searchable history.
-      </Text>
-      <Text style={styles.points}>• Text + voice input</Text>
-      <Text style={styles.points}>• Text-to-speech output</Text>
-      <Text style={styles.points}>• Favorites and exportable history</Text>
-      <Text style={styles.points}>• Dark mode and accessibility controls</Text>
+        <Text style={styles.body}>
+          Use the default LibreTranslate instance or connect your own server. Translate text and
+          files, with history stored on your device. The public instance is rate limited and may
+          require an API key.
+        </Text>
+        <Text style={styles.points}>• Text + voice input</Text>
+        <Text style={styles.points}>• Text-to-speech output</Text>
+        <Text style={styles.points}>• Favorites and exportable history</Text>
+        <Text style={styles.points}>• Dark mode and accessibility controls</Text>
 
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel="Get started"
-        style={styles.button}
-        onPress={handleContinue}
-      >
-        <Text style={styles.buttonText}>Get Started</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Get started"
+          style={styles.button}
+          onPress={handleContinue}
+        >
+          <Text style={styles.buttonText}>Get Started</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );

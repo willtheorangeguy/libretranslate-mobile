@@ -25,3 +25,21 @@ describe('Translation flow scenario', () => {
     expect(withFavorite.favorites.length).toBe(1);
   });
 });
+
+test('editing a translation replaces its history row and preserves its favorite', () => {
+  const entry: Translation = {
+    id: 'draft',
+    sourceText: 'Hi',
+    translatedText: 'Hola',
+    sourceLang: 'en',
+    targetLang: 'es',
+    timestamp: 1,
+    isFavorite: false,
+  };
+  let state = translationReducer(undefined, addToHistory(entry));
+  state = translationReducer(state, toggleFavorite(entry.id));
+  state = translationReducer(state, addToHistory({ ...entry, sourceText: 'Hello', timestamp: 2 }));
+  expect(state.history).toHaveLength(1);
+  expect(state.history[0]).toMatchObject({ sourceText: 'Hello', isFavorite: true });
+  expect(state.favorites[0]).toEqual(state.history[0]);
+});

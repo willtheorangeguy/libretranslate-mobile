@@ -1,17 +1,10 @@
 # LibreTranslate Mobile — Quickstart
 
-You need macOS with Xcode, and a LibreTranslate server you can reach.
+You need macOS with Xcode 16.1 or newer to build for iOS.
 
-## 1. Have a server
+## 1. Choose a server
 
-The URL field is prefilled with `http://localhost:5000`, which is a placeholder rather than a
-working service. The app cannot translate until you point it at something real — which is the
-privacy property, not an omission.
-
-Options:
-
-- **Self-host LibreTranslate** — the intended path, and the reason this app exists.
-- **A public instance**, if you accept that your text goes to whoever runs it.
+Use the default `https://libretranslate.com` instance or supply your own URL. The default is rate limited and currently requires an API key. A custom server can be hosted remotely or on your local network.
 
 ## 2. Install and run
 
@@ -28,8 +21,7 @@ npm run ios
 
 ## 3. Onboarding, then your server
 
-The app walks you through onboarding, then asks for your LibreTranslate URL, a name for it, and
-an optional API key. It checks the connection before saving.
+Choose **Default instance** or **Custom server** in setup. Add an API key if your server requires one. For a custom server on your computer, use its LAN address rather than `localhost`. The connection check verifies available languages.
 
 ## 4. Translate
 

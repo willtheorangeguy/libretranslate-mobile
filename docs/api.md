@@ -1,82 +1,21 @@
 # LibreTranslate Mobile — API
 
-The app is a client. It defines no API of its own; it calls three endpoints on the
-LibreTranslate instance you configure.
+The app calls the selected LibreTranslate instance.
 
-## Endpoints used
-
-| Endpoint | Used for |
+| Endpoint | Use |
 |---|---|
-| `GET /languages` | Connection check on setup, and the language list |
-| `POST /translate` | Every translation |
-| `POST /detect` | Auto-detect, before translating |
+| `GET /languages` | Connection validation, languages, supported target directions |
+| `GET /frontend/settings` | Character limit, key requirements, file support and formats |
+| `POST /translate` | Text translation, with `source: "auto"` for automatic detection |
+| `POST /translate_file` | Multipart file translation; returns `translatedFileUrl` |
+| `POST /detect` | Available in the service API; not needed by the text screen |
 
-That is the whole surface. If your instance serves those three, the app works.
+Optional keys are sent as `api_key` in request bodies. The screen reads `detectedLanguage` from translation responses. File downloads use the server-returned HTTP(S) URL. Servers without `/frontend/settings` (404 or 405) retain text translation with fallback limits and no file mode.
 
-## Requests
+The client validates HTTP(S) URLs and language-list responses, preserves server error messages, explains authentication failures, and honors `Retry-After` on 429 responses. The default instance has an additional three-second minimum request interval. Cooldowns survive client recreation within the running app. Requests time out after 30 seconds, or 120 seconds for file uploads.
 
-### Translate
+The language cache is scoped to the active client. Text requests are debounced and canceled when inputs change; stale responses are ignored even if cancellation arrives too late.
 
-```json
-POST /translate
-{ "q": "Hello", "source": "en", "target": "fr", "api_key": "optional" }
-```
+Translation suggestions and alternative translations are not exposed in the UI.
 
-Response: `{ "translatedText": "Bonjour" }`
-
-### Detect
-
-```json
-POST /detect
-{ "q": "Bonjour", "api_key": "optional" }
-```
-
-Response: an array; the app takes `[0].language`, falling back to `"unknown"`.
-
-### Languages
-
-```text
-GET /languages
-```
-
-Response: an array of `{ code, name }`. The connection check accepts the server only if the
-response is an array — a reverse proxy returning an HTML error page will be rejected, which is
-the point.
-
-## Client behaviour
-
-| Behaviour | Detail |
-|---|---|
-| Base URL | Trailing slashes stripped on entry |
-| Timeout | 10s on every request |
-| API key | Sent as `api_key` in the **body** of translate and detect, never on `/languages` |
-| Language cache | 1 hour, and the stale copy is served if a refresh fails |
-| Empty input | Short-circuits before any request is made |
-
-The stale-cache fallback is deliberate: losing the server should not empty the language picker
-and leave the UI unusable.
-
-## Errors
-
-`LibreTranslateClient.handleError` maps failures to messages the UI shows directly:
-
-| Condition | Message |
-|---|---|
-| `ECONNABORTED` | "Connection timeout. Please check your server URL." |
-| `404` | "Server endpoint not found. Check your LibreTranslate URL." |
-| `503` | "Server is temporarily unavailable." |
-| Anything else | The axios message |
-
-That last row is thinner than it looks — LibreTranslate returns a JSON body explaining *why* a
-request was refused, and it is discarded. See
-[`internal/known-issues.md`](./internal/known-issues.md).
-
-## Not used
-
-`/translate_file`, `/frontend/settings`, `/suggest`, and the alternatives parameter are all
-unimplemented. See [Roadmap](./roadmap.md).
-
-## Reference
-
-[LibreTranslate API documentation](https://libretranslate.com/docs/) — the authority on the
-endpoints above. Implementation is in `src/services/LibreTranslateClient.ts`.
+See the [official API documentation](https://docs.libretranslate.com/) and `src/services/LibreTranslateClient.ts`.

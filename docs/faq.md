@@ -10,14 +10,11 @@ Your history, favourites, settings, and server list stay on the device.
 
 ## Which server should I use?
 
-Your own. That is the point of the app — the server sees your text, so it should be one you
-control.
-
-A public instance works too, but then you have simply chosen a different stranger.
+Use the default LibreTranslate instance for a hosted service, or your own server for control over processing. The public instance has rate limits and currently requires an API key.
 
 ## Do I need an API key?
 
-Only if your instance requires one. Leave the field blank otherwise.
+The official default instance currently requires a key. Custom instances may allow keyless access; leave the field blank in that case.
 
 ## Does it work offline?
 
@@ -46,11 +43,11 @@ Read the export note in `internal/known-issues.md` first; it does not include ev
 ## Why does swapping languages do nothing on Auto?
 
 There is no language to swap *to* until detection has run, so swap is disabled while the source
-is Auto Detect. Pick a real source language and it works.
+is Auto Detect and no detected language is available. Translate first or select a source language.
 
 ## Why is there a delay before it translates?
 
-500ms of debounce after you stop typing, so a sentence is one request rather than thirty.
+Text is debounced for 500ms. The default server also has a three-second minimum request interval; additional server cooldowns appear as a countdown.
 
 ## Why is my language missing from the picker?
 

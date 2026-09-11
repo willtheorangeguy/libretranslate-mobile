@@ -5,7 +5,7 @@ import TranslateScreen from '../screens/TranslateScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons } from '@react-native-vector-icons/material-icons/static';
 import { useThemeColors } from '../theme';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
@@ -25,14 +25,10 @@ export default function MainAppTabs() {
       headerTintColor: colors.textPrimary,
       headerShown: true,
     }),
-    [colors]
+    [colors],
   );
 
-  const getTabIcon = (
-    routeName: keyof BottomTabParamList,
-    color: string,
-    size: number
-  ) => {
+  const getTabIcon = (routeName: keyof BottomTabParamList, color: string, size: number) => {
     const iconMap: Record<keyof BottomTabParamList, MaterialIconName> = {
       Translate: 'translate',
       History: 'history',
@@ -54,23 +50,11 @@ export default function MainAppTabs() {
       <Tab.Screen
         name="Translate"
         component={TranslateScreen}
-        options={{ title: 'Translate' }}
+        options={{ title: 'LibreTranslate', tabBarLabel: 'Translate' }}
       />
-      <Tab.Screen
-        name="History"
-        component={HistoryScreen}
-        options={{ title: 'History' }}
-      />
-      <Tab.Screen
-        name="Favorites"
-        component={FavoritesScreen}
-        options={{ title: 'Favorites' }}
-      />
-      <Tab.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{ title: 'Settings' }}
-      />
+      <Tab.Screen name="History" component={HistoryScreen} options={{ title: 'History' }} />
+      <Tab.Screen name="Favorites" component={FavoritesScreen} options={{ title: 'Favorites' }} />
+      <Tab.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
     </Tab.Navigator>
   );
 }

@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   TextInput,
-  TouchableOpacity,
   Text,
   ActivityIndicator,
   Alert,
@@ -11,217 +10,194 @@ import {
   KeyboardAvoidingView,
   Platform,
   PermissionsAndroid,
+  useWindowDimensions,
 } from 'react-native';
+import { Button, IconButton } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { MaterialIcons } from '@expo/vector-icons';
 import { useAppDispatch, useAppSelector } from '../hooks/useRedux';
-import { addToHistory, setError, setLoading } from '../store/slices/translationSlice';
+import { useTranslation } from '../hooks/useTranslation';
+import { addToHistory } from '../store/slices/translationSlice';
 import { updateSettings } from '../store/slices/settingsSlice';
 import { TranslationService } from '../services/TranslationService';
+import { getClient } from '../services/LibreTranslateClient';
 import { DatabaseService } from '../services/DatabaseService';
 import { StorageService } from '../services/StorageService';
 import { SpeechService } from '../services/SpeechService';
-import { Language, Translation } from '../types';
+import { FrontendSettings, Language, Translation } from '../types';
 import LanguageSelector from '../components/LanguageSelector';
-import { UI_CONSTANTS } from '../constants';
+import FileTranslation from '../components/FileTranslation';
+import { DEFAULT_SERVER_URL, UI_CONSTANTS } from '../constants';
 import { useThemeColors, ThemeColors } from '../theme';
-
-const DEBOUNCE_MS = 500;
 
 export default function TranslateScreen() {
   const dispatch = useAppDispatch();
+  const navigation = useNavigation();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { width } = useWindowDimensions();
   const settings = useAppSelector(state => state.settings.settings);
-  const { loading } = useAppSelector(state => state.translation);
-
+  const server = useAppSelector(state => state.server.activeServer);
   const [sourceText, setSourceText] = useState('');
-  const [translatedText, setTranslatedText] = useState('');
-  const [sourceLang, setSourceLang] = useState(settings.defaultSourceLang);
+  const sourceTextRef = useRef('');
+  const [sourceLang, setSourceLang] = useState(
+    settings.enableAutoDetect
+      ? settings.defaultSourceLang
+      : settings.defaultSourceLang === 'auto'
+      ? 'en'
+      : settings.defaultSourceLang,
+  );
   const [targetLang, setTargetLang] = useState(settings.defaultTargetLang);
   const [languages, setLanguages] = useState<Language[]>([]);
+  const [frontend, setFrontend] = useState<FrontendSettings>({});
   const [loadingLanguages, setLoadingLanguages] = useState(true);
-  const [translationError, setTranslationError] = useState<string | null>(null);
-  const [translationTimeout, setTranslationTimeout] = useState<ReturnType<typeof setTimeout> | null>(
-    null
-  );
+  const [languageError, setLanguageError] = useState('');
+  const [reload, setReload] = useState(0);
+  const [mode, setMode] = useState<'text' | 'file'>('text');
   const [isListening, setIsListening] = useState(false);
-  // One history row per editing session: reused while the user keeps typing,
-  // reset when the input is cleared/swapped so partial drafts don't flood history.
+  const [copied, setCopied] = useState(false);
   const sessionIdRef = useRef<string | null>(null);
-
-  const loadLanguages = useCallback(async () => {
-    try {
-      setLoadingLanguages(true);
-      const langs = await TranslationService.getLanguages();
-      setLanguages(langs);
-    } catch (error) {
-      console.error('Error loading languages:', error);
-      Alert.alert('Error', 'Failed to load available languages.');
-    } finally {
-      setLoadingLanguages(false);
-    }
-  }, []);
+  const charLimit =
+    typeof frontend.charLimit === 'number' && frontend.charLimit > 0
+      ? frontend.charLimit
+      : frontend.charLimit === -1
+      ? undefined
+      : UI_CONSTANTS.CHARACTER_LIMIT;
+  const requiresKey = frontend.keyRequired && !server?.apiKey;
+  const targets = languages.find(lang => lang.code === sourceLang)?.targets;
+  const targetLanguages = targets
+    ? languages.filter(lang => targets.includes(lang.code))
+    : languages;
+  const validPair =
+    (sourceLang === 'auto' || languages.some(lang => lang.code === sourceLang)) &&
+    targetLanguages.some(lang => lang.code === targetLang);
+  const enabled = !loadingLanguages && !languageError && !requiresKey && validPair;
+  const { result, loading, error, retry, invalidate, cooldown } = useTranslation(
+    sourceText,
+    sourceLang,
+    targetLang,
+    Boolean(enabled && mode === 'text' && (!charLimit || sourceText.length <= charLimit)),
+    server,
+  );
+  const translatedText = result?.translatedText || '';
+  const detected = result?.detectedLanguage?.language;
+  const changeText = useCallback(
+    (text: string) => {
+      if (sourceTextRef.current === text) return;
+      sourceTextRef.current = text;
+      invalidate();
+      setSourceText(text);
+      setCopied(false);
+      if (!text) sessionIdRef.current = null;
+    },
+    [invalidate],
+  );
 
   useEffect(() => {
-    loadLanguages();
-  }, [loadLanguages]);
+    let active = true;
+    setLoadingLanguages(true);
+    setLanguageError('');
+    setLanguages([]);
+    setFrontend({});
+    const client = getClient();
+    Promise.all([TranslationService.getLanguages(), client.getFrontendSettings()])
+      .then(([langs, options]) => {
+        if (!active) return;
+        setLanguages(langs);
+        setFrontend(options);
+        setSourceLang(current =>
+          current === 'auto' || langs.some(lang => lang.code === current) ? current : 'auto',
+        );
+      })
+      .catch(reason => {
+        if (active)
+          setLanguageError(
+            reason instanceof Error ? reason.message : 'Could not load this server.',
+          );
+      })
+      .finally(() => {
+        if (active) setLoadingLanguages(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [server, reload]);
+
+  useEffect(() => {
+    if (targetLanguages.length && !targetLanguages.some(lang => lang.code === targetLang))
+      setTargetLang(targetLanguages[0].code);
+  }, [targetLanguages, targetLang]);
+
+  useEffect(() => {
+    if (!languages.length) return;
+    dispatch(updateSettings({ defaultSourceLang: sourceLang, defaultTargetLang: targetLang }));
+    StorageService.getSettings()
+      .then(existing =>
+        StorageService.saveSettings({
+          ...existing,
+          defaultSourceLang: sourceLang,
+          defaultTargetLang: targetLang,
+        }),
+      )
+      .catch(() => {});
+  }, [dispatch, sourceLang, targetLang, languages]);
 
   useEffect(() => {
     SpeechService.initialize({
-      onSpeechResult: resultText => {
-        setSourceText(resultText);
-      },
+      onSpeechResult: changeText,
       onSpeechError: message => {
         setIsListening(false);
-        Alert.alert('Speech Recognition Error', message);
+        Alert.alert('Voice input', message);
       },
-      onSpeechEnd: () => {
-        setIsListening(false);
-      },
-    }).catch(error => {
-      console.error('Speech initialization failed:', error);
-    });
-
+      onSpeechEnd: () => setIsListening(false),
+    }).catch(() => {});
     return () => {
-      SpeechService.cleanup().catch(error => {
-        console.error('Speech cleanup failed:', error);
-      });
+      SpeechService.cleanup().catch(() => {});
     };
-  }, []);
+  }, [changeText]);
 
   useEffect(() => {
-    return () => {
-      if (translationTimeout) {
-        clearTimeout(translationTimeout);
-      }
+    if (!result) return;
+    if (!sessionIdRef.current)
+      sessionIdRef.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const translation: Translation = {
+      id: sessionIdRef.current,
+      sourceText,
+      translatedText: result.translatedText,
+      sourceLang: result.detectedLanguage?.language || sourceLang,
+      targetLang,
+      timestamp: Date.now(),
+      isFavorite: false,
     };
-  }, [translationTimeout]);
-
-  const persistLanguageSelection = useCallback(async () => {
-    dispatch(
-      updateSettings({
-        defaultSourceLang: sourceLang,
-        defaultTargetLang: targetLang,
-      })
+    dispatch(addToHistory(translation));
+    DatabaseService.saveTranslation(translation).catch(() =>
+      Alert.alert(
+        'History unavailable',
+        'Your translation is ready, but could not be saved to history.',
+      ),
     );
+  }, [result, dispatch, sourceText, sourceLang, targetLang]);
 
-    const existing = await StorageService.getSettings();
-    await StorageService.saveSettings({
-      ...existing,
-      defaultSourceLang: sourceLang,
-      defaultTargetLang: targetLang,
-    });
-  }, [dispatch, sourceLang, targetLang]);
-
-  useEffect(() => {
-    persistLanguageSelection().catch(error => {
-      console.error('Failed to persist language settings:', error);
-    });
-  }, [persistLanguageSelection]);
-
-  const performTranslation = useCallback(
-    async (text: string) => {
-      if (!text.trim()) {
-        setTranslatedText('');
-        setTranslationError(null);
-        sessionIdRef.current = null;
-        return;
-      }
-
-      dispatch(setLoading(true));
-      setTranslationError(null);
-
-      try {
-        let resolvedSource = sourceLang;
-        if (settings.enableAutoDetect && sourceLang === 'auto') {
-          resolvedSource = await TranslationService.detectLanguage(text);
-        }
-
-        const result = await TranslationService.translate(text, resolvedSource, targetLang);
-        setTranslatedText(result);
-
-        if (!sessionIdRef.current) {
-          sessionIdRef.current = `${Date.now()}`;
-        }
-
-        const translation: Translation = {
-          id: sessionIdRef.current,
-          sourceText: text,
-          translatedText: result,
-          sourceLang: resolvedSource,
-          targetLang,
-          timestamp: Date.now(),
-          isFavorite: false,
-        };
-
-        dispatch(addToHistory(translation));
-        await DatabaseService.saveTranslation(translation);
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Translation failed. Please try again.';
-        setTranslationError(errorMessage);
-        dispatch(setError(errorMessage));
-      } finally {
-        dispatch(setLoading(false));
-      }
-    },
-    [dispatch, settings.enableAutoDetect, sourceLang, targetLang]
-  );
-
-  const handleSourceTextChange = (text: string) => {
-    setSourceText(text);
-    setTranslationError(null);
-
-    if (translationTimeout) {
-      clearTimeout(translationTimeout);
-    }
-
-    const timeout = setTimeout(() => {
-      performTranslation(text).catch(error => {
-        console.error('Translation failed:', error);
-      });
-    }, DEBOUNCE_MS);
-    setTranslationTimeout(timeout);
-  };
-
-  const handleSwapLanguages = () => {
-    if (sourceLang === 'auto') {
-      Alert.alert('Cannot swap', 'Swap is disabled while source language is Auto Detect.');
-      return;
-    }
+  const handleSwap = () => {
+    const from = sourceLang === 'auto' ? detected : sourceLang;
+    if (!from) return;
+    invalidate();
     setSourceLang(targetLang);
-    setTargetLang(sourceLang);
-    setSourceText(translatedText);
-    setTranslatedText(sourceText);
+    setTargetLang(from);
+    changeText(translatedText || sourceText);
     sessionIdRef.current = null;
   };
-
-  const handleCopyText = (text: string) => {
-    Clipboard.setString(text);
-    Alert.alert('Copied', 'Copied to clipboard.');
-  };
-
-  const handleClearAll = () => {
-    setSourceText('');
-    setTranslatedText('');
-    setTranslationError(null);
-    sessionIdRef.current = null;
-  };
-
+  const openServer = () => navigation.navigate('ServerSetup' as never);
   const ensureMicPermission = async (): Promise<boolean> => {
     if (Platform.OS !== 'android') {
       return true;
     }
-    const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-      {
-        title: 'Microphone permission',
-        message: 'Voice input needs access to your microphone.',
-        buttonPositive: 'OK',
-        buttonNegative: 'Cancel',
-      }
-    );
+    const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO, {
+      title: 'Microphone permission',
+      message: 'Voice input needs access to your microphone.',
+      buttonPositive: 'OK',
+      buttonNegative: 'Cancel',
+    });
     return granted === PermissionsAndroid.RESULTS.GRANTED;
   };
 
@@ -236,14 +212,15 @@ export default function TranslateScreen() {
       if (!allowed) {
         Alert.alert(
           'Microphone permission required',
-          'Enable microphone access in settings to use voice input.'
+          'Enable microphone access in settings to use voice input.',
         );
         return;
       }
       await SpeechService.startListening(sourceLang);
       setIsListening(true);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not start speech recognition.';
+    } catch (reason) {
+      const message =
+        reason instanceof Error ? reason.message : 'Could not start speech recognition.';
       Alert.alert('Speech Recognition Error', message);
       setIsListening(false);
     }
@@ -255,259 +232,304 @@ export default function TranslateScreen() {
     }
     try {
       await SpeechService.speak(translatedText, targetLang);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not play speech output.';
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : 'Could not play speech output.';
       Alert.alert('Text-to-Speech Error', message);
     }
   };
 
-  const sourceCharCount = sourceText.length;
-  const textAreaStyle = [styles.textInput, { height: 120 }, { fontSize: settings.textSize }];
-
+  const textStyle = [styles.textArea, { fontSize: settings.textSize + 2 }];
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
     >
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-        {loadingLanguages ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Loading languages...</Text>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+        <View style={styles.serverRow}>
+          <View style={styles.serverInfo}>
+            <Text style={styles.eyebrow}>
+              {server?.url === DEFAULT_SERVER_URL
+                ? 'PUBLIC INSTANCE · RATE LIMITED'
+                : 'CUSTOM INSTANCE'}
+            </Text>
+            <Text numberOfLines={1} style={styles.serverUrl}>
+              {server?.url}
+            </Text>
           </View>
+          <Button compact onPress={openServer}>
+            Server settings
+          </Button>
+        </View>
+        <View style={styles.tabs}>
+          <Button
+            mode={mode === 'text' ? 'contained-tonal' : 'text'}
+            icon="format-text"
+            onPress={() => {
+              if (mode !== 'text') invalidate();
+              setMode('text');
+            }}
+          >
+            Translate Text
+          </Button>
+          <Button
+            mode={mode === 'file' ? 'contained-tonal' : 'text'}
+            icon="file-document-outline"
+            onPress={() => {
+              if (mode !== 'file') invalidate();
+              setMode('file');
+            }}
+          >
+            Translate Files
+          </Button>
+        </View>
+        {loadingLanguages && (
+          <ActivityIndicator accessibilityLabel="Loading server languages" color={colors.primary} />
+        )}
+        {!!languageError && (
+          <View style={styles.notice}>
+            <Text accessibilityRole="alert" style={styles.error}>
+              {languageError}
+            </Text>
+            <Button onPress={() => setReload(value => value + 1)}>Retry connection</Button>
+          </View>
+        )}
+        {!!requiresKey && (
+          <View style={styles.notice}>
+            <Text style={styles.error}>
+              This instance requires an API key. Add your key in Server settings or connect your own
+              LibreTranslate server.
+            </Text>
+            <Button onPress={openServer}>Configure server</Button>
+          </View>
+        )}
+        <View style={styles.languageRow}>
+          <View style={styles.language}>
+            <Text style={styles.label}>Translate from</Text>
+            <LanguageSelector
+              languages={[{ code: 'auto', name: 'Auto Detect' }, ...languages]}
+              selectedLang={sourceLang}
+              onSelect={lang => {
+                if (lang !== sourceLang) invalidate();
+                setSourceLang(lang);
+              }}
+              placeholder="Source language"
+            />
+            {detected && (
+              <Text style={styles.caption}>
+                Detected: {languages.find(lang => lang.code === detected)?.name || detected}
+              </Text>
+            )}
+          </View>
+          <IconButton
+            icon="swap-horizontal"
+            accessibilityLabel="Swap source and target languages"
+            disabled={sourceLang === 'auto' && !detected}
+            onPress={handleSwap}
+            iconColor={colors.primary}
+          />
+          <View style={styles.language}>
+            <Text style={styles.label}>Translate into</Text>
+            <LanguageSelector
+              languages={targetLanguages}
+              selectedLang={targetLang}
+              onSelect={lang => {
+                if (lang !== targetLang) invalidate();
+                setTargetLang(lang);
+              }}
+              placeholder="Target language"
+            />
+          </View>
+        </View>
+        {mode === 'file' ? (
+          <FileTranslation
+            key={server?.url}
+            source={sourceLang}
+            target={targetLang}
+            settings={frontend}
+            enabled={Boolean(enabled)}
+          />
         ) : (
           <>
-            <View style={styles.languageRow}>
-              <LanguageSelector
-                languages={languages}
-                selectedLang={sourceLang}
-                onSelect={setSourceLang}
-                placeholder="Source"
-              />
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityLabel="Swap source and target languages"
-                style={styles.swapButton}
-                onPress={handleSwapLanguages}
-              >
-                <MaterialIcons name="swap-horiz" size={24} color={colors.primary} />
-              </TouchableOpacity>
-              <LanguageSelector
-                languages={languages}
-                selectedLang={targetLang}
-                onSelect={setTargetLang}
-                placeholder="Target"
-              />
-            </View>
-
-            <View style={styles.section}>
-              <View style={styles.textAreaHeader}>
-                <Text style={styles.label}>Text to translate</Text>
-                <Text
-                  style={[
-                    styles.charCount,
-                    sourceCharCount > UI_CONSTANTS.CHARACTER_LIMIT && styles.charCountError,
-                  ]}
-                >
-                  {sourceCharCount} / {UI_CONSTANTS.CHARACTER_LIMIT}
-                </Text>
-              </View>
-              <TextInput
-                accessibilityLabel="Source text input"
-                style={textAreaStyle}
-                placeholder="Enter text to translate..."
-                placeholderTextColor={colors.textMuted}
-                value={sourceText}
-                onChangeText={handleSourceTextChange}
-                multiline
-                editable={!loading}
-                maxLength={UI_CONSTANTS.CHARACTER_LIMIT}
-              />
-
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel="Copy source text"
-                  style={styles.iconButton}
-                  onPress={() => handleCopyText(sourceText)}
-                  disabled={!sourceText}
-                >
-                  <MaterialIcons name="content-copy" size={18} color={colors.primary} />
-                  <Text style={styles.iconButtonText}>Copy</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel={isListening ? 'Stop voice input' : 'Start voice input'}
-                  style={styles.iconButton}
-                  onPress={handleSpeechToText}
-                >
-                  <MaterialIcons name={isListening ? 'mic-off' : 'mic'} size={18} color={colors.primary} />
-                  <Text style={styles.iconButtonText}>{isListening ? 'Stop Mic' : 'Voice'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel="Clear source and translated text"
-                  style={styles.iconButton}
-                  onPress={handleClearAll}
-                >
-                  <MaterialIcons name="clear" size={18} color={colors.danger} />
-                  <Text style={styles.iconButtonText}>Clear</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.section}>
-              <View style={styles.textAreaHeader}>
-                <Text style={styles.label}>Translation</Text>
-                {loading && <ActivityIndicator color={colors.primary} size="small" />}
-              </View>
-
-              {translationError ? (
-                <View style={styles.errorBox}>
-                  <MaterialIcons name="error-outline" size={18} color={colors.danger} />
-                  <Text style={styles.errorText}>{translationError}</Text>
+            <View style={[styles.panels, width >= 700 && styles.wide]}>
+              <View style={styles.panel}>
+                <View style={styles.panelHeader}>
+                  <Text style={styles.label}>Text to translate</Text>
+                  <IconButton
+                    icon="close"
+                    accessibilityLabel="Clear source and translated text"
+                    onPress={() => changeText('')}
+                    disabled={!sourceText}
+                  />
                 </View>
-              ) : null}
-
-              <TextInput
-                accessibilityLabel="Translated text output"
-                style={textAreaStyle}
-                placeholder="Translation will appear here..."
-                placeholderTextColor={colors.textMuted}
-                value={translatedText}
-                editable={false}
-                multiline
-              />
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel="Copy translated text"
-                  style={styles.iconButton}
-                  onPress={() => handleCopyText(translatedText)}
-                  disabled={!translatedText}
-                >
-                  <MaterialIcons name="content-copy" size={18} color={colors.primary} />
-                  <Text style={styles.iconButtonText}>Copy</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel="Speak translated text"
-                  style={styles.iconButton}
-                  onPress={handleSpeakTranslation}
-                  disabled={!translatedText}
-                >
-                  <MaterialIcons name="volume-up" size={18} color={colors.primary} />
-                  <Text style={styles.iconButtonText}>Speak</Text>
-                </TouchableOpacity>
+                <TextInput
+                  accessibilityLabel="Source text input"
+                  style={textStyle}
+                  placeholder="Enter text to translate…"
+                  placeholderTextColor={colors.textMuted}
+                  value={sourceText}
+                  onChangeText={changeText}
+                  multiline
+                  textAlignVertical="top"
+                />
+                <View style={styles.toolbar}>
+                  <Button
+                    compact
+                    icon="content-paste"
+                    onPress={async () => {
+                      try {
+                        changeText(await Clipboard.getString());
+                      } catch {
+                        Alert.alert('Clipboard', 'Could not paste text.');
+                      }
+                    }}
+                  >
+                    Paste
+                  </Button>
+                  <IconButton
+                    icon={isListening ? 'microphone-off' : 'microphone'}
+                    accessibilityLabel={isListening ? 'Stop voice input' : 'Start voice input'}
+                    onPress={handleSpeechToText}
+                  />
+                  <Text
+                    style={[
+                      styles.count,
+                      !!charLimit && sourceText.length > charLimit && styles.error,
+                    ]}
+                  >
+                    {sourceText.length}
+                    {charLimit ? ` / ${charLimit}` : ''}
+                  </Text>
+                </View>
               </View>
+              <View style={[styles.panel, styles.outputPanel]}>
+                <View style={styles.panelHeader}>
+                  <Text style={styles.label}>Translated text</Text>
+                  {loading && (
+                    <ActivityIndicator accessibilityLabel="Translating" color={colors.primary} />
+                  )}
+                </View>
+                <Text
+                  selectable
+                  accessibilityLabel="Translated text output"
+                  style={[textStyle, !translatedText && styles.placeholder]}
+                >
+                  {translatedText || (loading ? 'Translating…' : 'Translation will appear here…')}
+                </Text>
+                <View style={styles.toolbar}>
+                  <Button
+                    compact
+                    icon="content-copy"
+                    disabled={!translatedText}
+                    onPress={() => {
+                      Clipboard.setString(translatedText);
+                      setCopied(true);
+                    }}
+                  >
+                    {copied ? 'Copied' : 'Copy'}
+                  </Button>
+                  <IconButton
+                    icon="volume-high"
+                    accessibilityLabel="Speak translated text"
+                    disabled={!translatedText}
+                    onPress={handleSpeakTranslation}
+                  />
+                </View>
+              </View>
+            </View>
+            {!!charLimit && sourceText.length > charLimit && (
+              <Text style={styles.error}>
+                This server accepts up to {charLimit} characters. Shorten your text to translate.
+              </Text>
+            )}
+            {!!error && (
+              <Text accessibilityRole="alert" style={styles.error}>
+                {error}
+              </Text>
+            )}
+            <View style={styles.translateRow}>
+              <Text style={styles.caption}>
+                {cooldown
+                  ? `Next request available in ${cooldown}s`
+                  : 'Translates automatically as you type'}
+              </Text>
+              <Button
+                mode="contained"
+                disabled={
+                  !enabled ||
+                  !sourceText.trim() ||
+                  loading ||
+                  cooldown > 0 ||
+                  (!!charLimit && sourceText.length > charLimit)
+                }
+                onPress={retry}
+              >
+                Translate
+              </Button>
             </View>
           </>
         )}
+        <Text style={styles.footer}>
+          Powered by LibreTranslate · Open source machine translation
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
-
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: c.background,
-    },
-    scrollView: {
-      flex: 1,
-    },
-    contentContainer: {
-      padding: 15,
-    },
-    loadingContainer: {
-      minHeight: 400,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    loadingText: {
-      marginTop: 10,
-      color: c.textSecondary,
-      fontSize: 16,
-    },
-    languageRow: {
+    container: { flex: 1, backgroundColor: c.background },
+    content: { padding: 16, gap: 20, maxWidth: 1100, width: '100%', alignSelf: 'center' },
+    serverRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    serverInfo: { flex: 1 },
+    eyebrow: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: c.textSecondary },
+    serverUrl: { fontSize: 13, color: c.textSecondary, marginTop: 5 },
+    tabs: {
       flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      marginBottom: 20,
+      flexWrap: 'wrap',
+      gap: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+      paddingBottom: 12,
     },
-    swapButton: {
-      backgroundColor: c.surface,
+    languageRow: { flexDirection: 'row', alignItems: 'center' },
+    language: { flex: 1, gap: 8 },
+    label: { fontSize: 14, fontWeight: '600', color: c.textPrimary },
+    panels: { gap: 12 },
+    wide: { flexDirection: 'row' },
+    panel: {
+      flex: 1,
       borderWidth: 1,
       borderColor: c.border,
+      backgroundColor: c.surface,
       borderRadius: 8,
-      padding: 10,
+      overflow: 'hidden',
     },
-    section: {
-      marginBottom: 20,
-    },
-    textAreaHeader: {
+    outputPanel: { backgroundColor: c.surfaceAlt },
+    panelHeader: {
+      minHeight: 48,
+      paddingHorizontal: 16,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 8,
     },
-    label: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: c.textPrimary,
-    },
-    charCount: {
-      fontSize: 12,
-      color: c.textSecondary,
-    },
-    charCountError: {
-      color: c.danger,
-    },
-    textInput: {
-      backgroundColor: c.surface,
-      borderWidth: 1,
-      borderColor: c.border,
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      color: c.textPrimary,
-      textAlignVertical: 'top',
-    },
-    buttonRow: {
-      flexDirection: 'row',
-      gap: 8,
-      marginTop: 10,
-    },
-    iconButton: {
-      flex: 1,
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: c.surface,
-      borderWidth: 1,
-      borderColor: c.border,
-      borderRadius: 6,
-      paddingVertical: 8,
-      gap: 6,
-    },
-    iconButtonText: {
-      fontSize: 13,
-      color: c.primary,
-      fontWeight: '500',
-    },
-    errorBox: {
-      backgroundColor: c.errorSurface,
-      borderRadius: 8,
-      padding: 10,
-      marginBottom: 10,
+    textArea: { minHeight: 160, padding: 16, paddingTop: 8, color: c.textPrimary },
+    placeholder: { color: c.textMuted },
+    toolbar: {
+      paddingHorizontal: 8,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      borderTopWidth: 1,
+      borderTopColor: c.borderSubtle,
     },
-    errorText: {
-      color: c.errorText,
-      fontSize: 14,
-      flex: 1,
+    count: { flex: 1, textAlign: 'right', paddingRight: 8, color: c.textSecondary, fontSize: 12 },
+    notice: { padding: 12, borderRadius: 8, backgroundColor: c.errorSurface },
+    error: { color: c.errorText, fontSize: 14 },
+    caption: { color: c.textSecondary, fontSize: 12, flexShrink: 1 },
+    translateRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
     },
+    footer: { color: c.textSecondary, fontSize: 12, textAlign: 'center', marginVertical: 16 },
   });

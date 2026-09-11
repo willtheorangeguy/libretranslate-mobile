@@ -2,7 +2,7 @@
 <h1 align="center">LibreTranslate Mobile</h1>
 
 <!-- Copy -->
-<h4 align="center">An iOS-first React Native client for your own self-hosted LibreTranslate — text and voice translation that never touches a third-party service.</h4>
+<h4 align="center">A React Native mobile client for LibreTranslate — translate text and files using the default instance or your own server.</h4>
 
 <!-- Badges -->
 <div align="center">
@@ -26,12 +26,17 @@
 
 ## Key Features
 
-- Point it at **your own** LibreTranslate server — no API key, no third-party translator.
+- Choose the **default LibreTranslate instance** with rate limiting, or connect your own URL with an optional API key.
+- Web-style text and file translation, server-provided limits, and native file sharing.
 - Text translation with debounce, language swap, and automatic source detection.
 - Speech in and speech out, plus clipboard copy and paste.
 - History and favourites in a local SQLite database, searchable, exportable as JSON.
 - Theme, text size, default languages, and auto-detect, all configurable.
 - Lint, typecheck, and unit, integration, and scenario tests behind one `npm run ci`.
+
+## Test locally on this Mac
+
+Run `npm run local:android` to open the native app in the Android emulator with a local English/Spanish LibreTranslate server. Choose **Custom server → http://127.0.0.1:5001**, with no API key. See [local testing](docs/local-testing.md) for setup and logs.
 
 ## Installation
 
@@ -50,7 +55,7 @@ Requires macOS with Xcode. See [`docs/installation.md`](docs/installation.md).
 
 ## Usage
 
-Enter your LibreTranslate server URL on first run, then translate. History and favourites build up locally as you go.
+Choose the default instance or enter your own LibreTranslate server URL on first run. The official public instance currently requires an API key; add one in Server settings or use an instance that permits keyless access. The app spaces default-server requests at least three seconds apart and honors server cooldowns. History and favourites stay on the device.
 
 ## Documentation
 
@@ -75,4 +80,4 @@ Translation by [LibreTranslate](https://libretranslate.com/). Built with [React 
 
 MIT — see [`LICENSE.md`](LICENSE.md).
 
-> Your text goes to the server you configure and nowhere else. History stays in a local database on the device.
+> Text and files go to the selected LibreTranslate server. History stays on your device. Voice input may use your platform’s speech recognition service.

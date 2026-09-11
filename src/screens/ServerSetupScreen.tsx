@@ -12,9 +12,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useAppDispatch } from '../hooks/useRedux';
+import { useAppDispatch, useAppSelector } from '../hooks/useRedux';
 import { addServer, removeServer, setActiveServer } from '../store/slices/serverSlice';
-import { initializeClient } from '../services/LibreTranslateClient';
+import { DEFAULT_SERVER, DEFAULT_SERVER_URL } from '../constants';
+import { TranslationService } from '../services/TranslationService';
+import {
+  initializeClient,
+  LibreTranslateClient,
+  normalizeServerUrl,
+} from '../services/LibreTranslateClient';
 import { ServerConfig } from '../types';
 import { StorageService } from '../services/StorageService';
 import { useThemeColors, ThemeColors } from '../theme';
@@ -23,15 +29,21 @@ export default function ServerSetupScreen() {
   const navigation = useNavigation();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const [serverUrl, setServerUrl] = useState('http://localhost:5000');
-  const [serverName, setServerName] = useState('Local Server');
-  const [apiKey, setApiKey] = useState('');
+  const activeServer = useAppSelector(state => state.server.activeServer);
+  const [useDefault, setUseDefault] = useState(
+    !activeServer || activeServer.url === DEFAULT_SERVER_URL,
+  );
+  const [serverUrl, setServerUrl] = useState(
+    activeServer?.url === DEFAULT_SERVER_URL ? '' : activeServer?.url || '',
+  );
+  const [serverName, setServerName] = useState(activeServer?.name || '');
+  const [apiKey, setApiKey] = useState(activeServer?.apiKey || '');
   const [loading, setLoading] = useState(false);
   const [savedServers, setSavedServers] = useState<ServerConfig[]>([]);
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    loadSavedServers();
+    loadSavedServers().catch(() => Alert.alert('Storage error', 'Could not load saved servers.'));
   }, []);
 
   const loadSavedServers = async () => {
@@ -39,96 +51,73 @@ export default function ServerSetupScreen() {
     setSavedServers(servers);
   };
 
+  const activate = async (server: ServerConfig) => {
+    const updated = [server, ...savedServers.filter(item => item.url !== server.url)].map(item => ({
+      ...item,
+      isActive: item.url === server.url,
+    }));
+    await StorageService.saveServers(updated);
+    await StorageService.setActiveServer(server);
+    initializeClient(server.url, server.apiKey);
+    TranslationService.clearCache();
+    dispatch(addServer(server));
+    dispatch(setActiveServer(server));
+    navigation.reset({ index: 0, routes: [{ name: 'MainApp' as never }] });
+  };
+
   const handleAddServer = async () => {
-    if (!serverUrl.trim()) {
-      Alert.alert('Error', 'Please enter a server URL');
-      return;
-    }
-
     setLoading(true);
-
     try {
-      const normalizedUrl = serverUrl.trim().replace(/\/+$/, '');
-      const alreadyExists = savedServers.some(server => server.url === normalizedUrl);
-      if (alreadyExists) {
-        Alert.alert('Server exists', 'A server with this URL is already configured.');
-        setLoading(false);
-        return;
-      }
-
-      const trimmedKey = apiKey.trim();
-      const client = initializeClient(normalizedUrl, trimmedKey || undefined);
-      const isValid = await client.validateConnection();
-
-      if (!isValid) {
-        Alert.alert(
-          'Connection Failed',
-          'Could not connect to the LibreTranslate server. Please check the URL and try again.'
-        );
-        setLoading(false);
-        return;
-      }
-
-      const newServer: ServerConfig = {
-        url: normalizedUrl,
-        name: serverName || 'LibreTranslate Server',
+      const url = useDefault ? DEFAULT_SERVER_URL : normalizeServerUrl(serverUrl);
+      const client = new LibreTranslateClient(url, apiKey);
+      await client.getLanguages();
+      await activate({
+        url,
+        name: useDefault ? DEFAULT_SERVER.name : serverName.trim() || 'Custom server',
         isActive: true,
         lastValidated: Date.now(),
-        apiKey: trimmedKey || undefined,
-      };
-
-      dispatch(addServer(newServer));
-      dispatch(setActiveServer(newServer));
-
-      const updated = [newServer, ...savedServers];
-      await StorageService.saveServers(updated);
-      await StorageService.setActiveServer(newServer);
-
-      setSavedServers(updated);
-      Alert.alert('Success', 'Server configured successfully!');
-      setServerUrl('');
-      setServerName('');
-      setApiKey('');
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainApp' as never }],
+        apiKey: apiKey.trim() || undefined,
       });
-    } catch {
-      Alert.alert('Error', 'Failed to connect to server. Please check the URL.');
+    } catch (error) {
+      Alert.alert(
+        'Connection failed',
+        error instanceof Error ? error.message : 'Could not save this server.',
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectServer = (server: ServerConfig) => {
-    dispatch(setActiveServer(server));
-    initializeClient(server.url, server.apiKey);
-    StorageService.setActiveServer(server);
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'MainApp' as never }],
-    });
+  const handleSelectServer = async (server: ServerConfig) => {
+    setLoading(true);
+    try {
+      await activate(server);
+    } catch {
+      Alert.alert('Storage error', 'Could not switch servers.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteServer = (url: string) => {
-    Alert.alert(
-      'Delete Server',
-      'Are you sure you want to delete this server configuration?',
-      [
-        { text: 'Cancel', onPress: () => {}, style: 'cancel' },
-        {
-          text: 'Delete',
-          onPress: async () => {
-            const updated = savedServers.filter(s => s.url !== url);
-            setSavedServers(updated);
-            await StorageService.saveServers(updated);
-            dispatch(removeServer(url));
-            Alert.alert('Success', 'Server deleted');
-          },
-          style: 'destructive',
+    Alert.alert('Delete Server', 'Are you sure you want to delete this server configuration?', [
+      { text: 'Cancel', onPress: () => {}, style: 'cancel' },
+      {
+        text: 'Delete',
+        onPress: async () => {
+          if (activeServer?.url === url) {
+            Alert.alert('Server in use', 'Switch to another server before removing this one.');
+            return;
+          }
+          const updated = savedServers.filter(s => s.url !== url);
+          setSavedServers(updated);
+          await StorageService.saveServers(updated);
+          dispatch(removeServer(url));
+          Alert.alert('Success', 'Server deleted');
         },
-      ]
-    );
+        style: 'destructive',
+      },
+    ]);
   };
 
   const renderServerItem = ({ item }: { item: ServerConfig }) => (
@@ -140,11 +129,25 @@ export default function ServerSetupScreen() {
       <View style={styles.serverActions}>
         <TouchableOpacity
           style={styles.selectButton}
+          disabled={loading}
           onPress={() => handleSelectServer(item)}
         >
-          <Text style={styles.selectButtonText}>Select</Text>
+          <Text style={styles.selectButtonText}>Use</Text>
         </TouchableOpacity>
         <TouchableOpacity
+          accessibilityLabel={`Edit ${item.name || item.url}`}
+          disabled={loading}
+          onPress={() => {
+            setUseDefault(item.url === DEFAULT_SERVER_URL);
+            setServerUrl(item.url);
+            setServerName(item.name || '');
+            setApiKey(item.apiKey || '');
+          }}
+        >
+          <Text style={styles.helpText}>Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          disabled={loading || activeServer?.url === item.url}
           style={styles.deleteButton}
           onPress={() => handleDeleteServer(item.url)}
         >
@@ -158,70 +161,117 @@ export default function ServerSetupScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         <Text style={styles.title}>LibreTranslate Setup</Text>
-      <Text style={styles.subtitle}>Add a LibreTranslate server</Text>
-
-      <View style={styles.formSection}>
-        <TextInput
-          style={styles.input}
-          placeholder="Server URL (e.g., http://localhost:5000)"
-          placeholderTextColor={colors.textMuted}
-          value={serverUrl}
-          onChangeText={setServerUrl}
-          editable={!loading}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="url"
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Server Name (optional)"
-          placeholderTextColor={colors.textMuted}
-          value={serverName}
-          onChangeText={setServerName}
-          editable={!loading}
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="API Key (optional)"
-          placeholderTextColor={colors.textMuted}
-          value={apiKey}
-          onChangeText={setApiKey}
-          editable={!loading}
-          autoCapitalize="none"
-          autoCorrect={false}
-          secureTextEntry
-        />
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleAddServer}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={colors.onPrimary} />
-          ) : (
-            <Text style={styles.buttonText}>Connect to Server</Text>
-          )}
-        </TouchableOpacity>
-
-        <Text style={styles.helpText}>
-          Make sure your LibreTranslate server is running and accessible at the provided URL.
-        </Text>
-      </View>
-
-      {savedServers.length > 0 && (
-        <View style={styles.savedServersSection}>
-          <Text style={styles.sectionTitle}>Saved Servers</Text>
-          <FlatList
-            data={savedServers}
-            keyExtractor={item => item.url}
-            renderItem={renderServerItem}
-            scrollEnabled={false}
-          />
+        <Text style={styles.subtitle}>Choose where your translations are processed</Text>
+        {navigation.canGoBack() && (
+          <TouchableOpacity accessibilityRole="button" onPress={() => navigation.goBack()}>
+            <Text style={styles.helpText}>Back to translation</Text>
+          </TouchableOpacity>
+        )}
+        <View style={styles.serverActions}>
+          <TouchableOpacity
+            accessibilityRole="radio"
+            accessibilityState={{ checked: useDefault }}
+            disabled={loading}
+            style={[styles.choice, useDefault && styles.selectedChoice]}
+            onPress={() => {
+              setUseDefault(true);
+              setApiKey(savedServers.find(item => item.url === DEFAULT_SERVER_URL)?.apiKey || '');
+            }}
+          >
+            <Text style={styles.sectionTitle}>Default instance</Text>
+            <Text style={styles.helpText}>libretranslate.com</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityRole="radio"
+            accessibilityState={{ checked: !useDefault }}
+            disabled={loading}
+            style={[styles.choice, !useDefault && styles.selectedChoice]}
+            onPress={() => {
+              setUseDefault(false);
+              setApiKey('');
+            }}
+          >
+            <Text style={styles.sectionTitle}>Custom server</Text>
+            <Text style={styles.helpText}>Use your own URL</Text>
+          </TouchableOpacity>
         </View>
-      )}
+        <Text style={styles.subtitle}>
+          {useDefault
+            ? 'The public instance is rate limited and may require an API key. Requests are spaced at least 3 seconds apart; server cooldowns also apply.'
+            : 'Connect to a hosted or local LibreTranslate instance. For a server on your computer, use its LAN address instead of localhost.'}
+        </Text>
+
+        <View style={styles.formSection}>
+          {!useDefault && (
+            <>
+              <TextInput
+                accessibilityLabel="Server URL"
+                style={styles.input}
+                placeholder="https://translate.example.com"
+                placeholderTextColor={colors.textMuted}
+                value={serverUrl}
+                onChangeText={setServerUrl}
+                editable={!loading}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+              />
+
+              <TextInput
+                style={styles.input}
+                accessibilityLabel="Server name"
+                placeholder="Server Name (optional)"
+                placeholderTextColor={colors.textMuted}
+                value={serverName}
+                onChangeText={setServerName}
+                editable={!loading}
+              />
+            </>
+          )}
+          <TextInput
+            accessibilityLabel="API key"
+            style={styles.input}
+            placeholder="API Key (if required by server)"
+            placeholderTextColor={colors.textMuted}
+            value={apiKey}
+            onChangeText={setApiKey}
+            editable={!loading}
+            autoCapitalize="none"
+            autoCorrect={false}
+            secureTextEntry
+          />
+
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleAddServer}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.onPrimary} />
+            ) : (
+              <Text style={styles.buttonText}>
+                {useDefault ? 'Use default instance' : 'Connect to custom server'}
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <Text style={styles.helpText}>
+            Text and files are sent to the selected server. Checking the connection verifies
+            available languages; your API key is checked when you translate.
+          </Text>
+        </View>
+
+        {savedServers.length > 0 && (
+          <View style={styles.savedServersSection}>
+            <Text style={styles.sectionTitle}>Saved Servers</Text>
+            <FlatList
+              data={savedServers}
+              keyExtractor={item => item.url}
+              renderItem={renderServerItem}
+              scrollEnabled={false}
+            />
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -229,6 +279,15 @@ export default function ServerSetupScreen() {
 
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
+    choice: {
+      flex: 1,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 8,
+      marginBottom: 16,
+    },
+    selectedChoice: { borderColor: c.primary, backgroundColor: c.surfaceAlt },
     safeArea: {
       flex: 1,
       backgroundColor: c.background,

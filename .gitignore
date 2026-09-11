@@ -96,3 +96,6 @@ docs/images/favicon.svg
 overrides/main.html
 overrides/partials/
 overrides/.icons/
+
+# Local emulator/server runtime and logs
+.local/

@@ -26,7 +26,7 @@ export interface ThemeColors {
 const light: ThemeColors = {
   isDark: false,
   statusBarStyle: 'dark-content',
-  background: '#F5F5F5',
+  background: '#F7F9FC',
   surface: '#FFFFFF',
   surfaceAlt: '#E5F0FF',
   border: '#DDDDDD',
@@ -34,7 +34,7 @@ const light: ThemeColors = {
   textPrimary: '#000000',
   textSecondary: '#666666',
   textMuted: '#999999',
-  primary: '#007AFF',
+  primary: '#1565C0',
   onPrimary: '#FFFFFF',
   danger: '#FF3B30',
   success: '#34C759',

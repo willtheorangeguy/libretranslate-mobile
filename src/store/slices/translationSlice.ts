@@ -20,7 +20,16 @@ export const translationSlice = createSlice({
   initialState,
   reducers: {
     addToHistory: (state, action: PayloadAction<Translation>) => {
-      state.history.unshift(action.payload);
+      const existing = state.history.find(item => item.id === action.payload.id);
+      const translation = {
+        ...action.payload,
+        isFavorite: existing?.isFavorite ?? action.payload.isFavorite,
+      };
+      state.history = state.history.filter(item => item.id !== translation.id);
+      state.history.unshift(translation);
+      state.favorites = state.favorites.map(item =>
+        item.id === translation.id ? translation : item,
+      );
       if (state.history.length > 100) {
         state.history.pop();
       }
@@ -32,7 +41,7 @@ export const translationSlice = createSlice({
         state.favorites = state.history.filter(item => item.isFavorite);
       }
     },
-    clearHistory: (state) => {
+    clearHistory: state => {
       state.history = [];
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
@@ -43,7 +52,7 @@ export const translationSlice = createSlice({
     },
     setHistoryAndFavorites: (
       state,
-      action: PayloadAction<{ history: Translation[]; favorites: Translation[] }>
+      action: PayloadAction<{ history: Translation[]; favorites: Translation[] }>,
     ) => {
       state.history = action.payload.history;
       state.favorites = action.payload.favorites;

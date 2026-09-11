@@ -1,0 +1,36 @@
+diff --git a/node_modules/react-native-sqlite-storage/platforms/android/build.gradle b/node_modules/react-native-sqlite-storage/platforms/android/build.gradle
+index ff79b10..f75a208 100644
+--- a/node_modules/react-native-sqlite-storage/platforms/android/build.gradle
++++ b/node_modules/react-native-sqlite-storage/platforms/android/build.gradle
+@@ -1,13 +1,4 @@
+-buildscript {
+-    repositories {
+-        google()
+-        jcenter()
+-    }
+ 
+-    dependencies {
+-        classpath 'com.android.tools.build:gradle:3.1.4'
+-    }
+-}
+ 
+ apply plugin: 'com.android.library'
+ 
+@@ -16,6 +7,7 @@ def safeExtGet(prop, fallback) {
+ }
+ 
+ android {
++    namespace "org.pgsqlite"
+     compileSdkVersion safeExtGet('compileSdkVersion', 23)
+     buildToolsVersion safeExtGet('buildToolsVersion', '27.0.3')
+ 
+diff --git a/node_modules/react-native-sqlite-storage/platforms/android/src/main/AndroidManifest.xml b/node_modules/react-native-sqlite-storage/platforms/android/src/main/AndroidManifest.xml
+index 0bdb302..9fecbe4 100644
+--- a/node_modules/react-native-sqlite-storage/platforms/android/src/main/AndroidManifest.xml
++++ b/node_modules/react-native-sqlite-storage/platforms/android/src/main/AndroidManifest.xml
+@@ -1,3 +1,3 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.pgsqlite" >
++<manifest xmlns:android="http://schemas.android.com/apk/res/android" >
+ </manifest>
+\ No newline at end of file

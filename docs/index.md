@@ -1,7 +1,6 @@
 # LibreTranslate Mobile — Documentation
 
-An iOS-first React Native client for a self-hosted LibreTranslate server. Translation, speech,
-and a local history database, with nothing leaving the server you choose.
+A React Native client for the default LibreTranslate instance or your own server. Text and file translation, speech, and local history.
 
 ```text
 libretranslate-mobile/
@@ -37,19 +36,10 @@ libretranslate-mobile/
 - [Troubleshooting](./troubleshooting.md) — connection, speech, and build problems
 - [Roadmap](./roadmap.md) — known gaps and non-goals
 
-## Why self-hosted matters here
+## Server choice
 
-Translation is one of the more revealing things you can hand to a third party — you send them
-exactly the text you did not want to keep to yourself.
+The default public instance offers hosted translation with rate limits and optional API-key configuration. The official instance currently requires a key. A custom instance gives you control over where text and files are processed. History and favorites stay in the device’s SQLite database.
 
-Pointing the app at your own LibreTranslate instance means the text goes to a server you
-control. There is no API key, no account, and no default server baked in: the app cannot
-translate until you tell it where to.
+## Testing
 
-History and favourites live in a local SQLite database on the device, not on the server.
-
-## Testing worth noting
-
-`src/__tests__/` covers the service layer and includes a **scenario test** running a full
-translation flow — unusual at this size, and the reason the service split below is worth
-preserving.
+Tests cover request payloads, server validation, rate-limit cooldowns, server-specific language caches, stale-response handling, and translation/history flows.

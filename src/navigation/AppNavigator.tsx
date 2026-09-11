@@ -1,14 +1,11 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import {
-  NavigationContainer,
-  DefaultTheme,
-  DarkTheme,
-} from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAppDispatch } from '../hooks/useRedux';
 import { useThemeColors } from '../theme';
 import { setServers, setActiveServer } from '../store/slices/serverSlice';
 import { setSettings } from '../store/slices/settingsSlice';
+import { DEFAULT_SERVER } from '../constants';
 import { RootStackParamList } from '../types';
 import ServerSetupScreen from '../screens/ServerSetupScreen';
 import MainAppTabs from './MainAppTabs';
@@ -46,8 +43,12 @@ export default function AppNavigator() {
       await DatabaseService.initialize();
 
       // Load servers
-      const servers = await StorageService.getServers();
-      const activeServer = await StorageService.getActiveServer();
+      const savedServers = await StorageService.getServers();
+      const servers = savedServers.length ? savedServers : [DEFAULT_SERVER];
+      const storedActive = await StorageService.getActiveServer();
+      const activeServer = servers.find(server => server.url === storedActive?.url) || servers[0];
+      await StorageService.saveServers(servers);
+      await StorageService.setActiveServer(activeServer);
 
       if (servers.length > 0) {
         dispatch(setServers(servers));
@@ -87,8 +88,8 @@ export default function AppNavigator() {
   const initialRouteName: keyof RootStackParamList = showOnboarding
     ? 'Onboarding'
     : hasServers
-      ? 'MainApp'
-      : 'ServerSetup';
+    ? 'MainApp'
+    : 'ServerSetup';
 
   return (
     <NavigationContainer theme={navTheme}>
@@ -97,14 +98,8 @@ export default function AppNavigator() {
         initialRouteName={initialRouteName}
         screenOptions={{ headerShown: false }}
       >
-        <Stack.Screen
-          name="Onboarding"
-          component={OnboardingScreen}
-        />
-        <Stack.Screen
-          name="ServerSetup"
-          component={ServerSetupScreen}
-        />
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        <Stack.Screen name="ServerSetup" component={ServerSetupScreen} />
         <Stack.Screen name="MainApp" component={MainAppTabs} />
       </Stack.Navigator>
     </NavigationContainer>

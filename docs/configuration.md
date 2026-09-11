@@ -1,84 +1,39 @@
 # LibreTranslate Mobile — Configuration
 
-Everything is configured in the app. There is no config file and no environment variable.
+Choose **Default instance** or **Custom server** during setup. Change this later using **Server settings** on the translation screen or **Settings → Manage LibreTranslate Servers**.
 
-## The server
+## Servers
 
-Entered on the server-setup screen and validated before it is accepted. Three fields:
+The default is `https://libretranslate.com`. It is a shared, rate-limited service. The app spaces requests to it at least three seconds apart and honors HTTP 429 cooldowns. Public access is controlled by the operator: the official instance currently requires an API key. Add a key or select a custom instance; the app does not bypass authentication or promise free public access.
 
-| Field | Notes |
+For a custom server, enter a complete HTTP or HTTPS base URL, an optional name, and an API key if required. URLs can include a reverse-proxy path, such as `https://example.com/translate`. Trailing slashes are removed. Credentials, queries, and fragments are rejected; keys belong in the API key field.
+
+Use your computer’s LAN address to connect from a physical phone, for example `http://192.168.1.20:5000`. `localhost` refers to the phone itself. Both platforms allow HTTP for user-configured servers; use HTTPS to encrypt text, files, and keys in transit. iOS asks for local-network access when needed.
+
+Setup checks `/languages`. This verifies that the endpoint is reachable and returns a nonempty language list; it does not verify the API key. Authentication failures explain how to update the key or switch servers. Saved servers can be selected, edited, or removed. Switch away from the active server before deleting it.
+
+## Translation
+
+The screen follows LibreTranslate’s web layout with text/file modes, source and target selectors, automatic detection, language swap, and input/output panels. Panels sit side by side on wider displays and stack on phones. Text translates after a 500ms typing pause. Editing, clearing, switching languages, or switching servers invalidates older requests.
+
+The server supplies supported languages, translation directions, character limits, key requirements, and file formats. Auto Detect is available only as a source. When detection returns a language, it can be used for swapping. The app uses `source: "auto"` in a single translation request.
+
+File mode uses the native document picker and sends the chosen file only when **Translate file** is pressed. After translation, **Download / share translation** downloads the result and opens the native share sheet. Unsupported servers show file mode as unavailable.
+
+## Limits
+
+| Limit | Behavior |
 |---|---|
-| URL | Prefilled with `http://localhost:5000`; trailing slashes are stripped |
-| Name | A label for your own benefit |
-| API key | Optional — leave blank for an instance that does not require one |
+| Default instance | At least 3 seconds between requests, plus server quotas |
+| HTTP 429 | Honors `Retry-After` seconds or dates; defaults to 60 seconds when absent |
+| Retries | Countdown followed by user retry; no automatic retry loop |
+| Text length | Server `charLimit`, otherwise 5,000; `-1` means unlimited |
+| Request timeout | 30 seconds; file uploads 120 seconds |
+| Languages cache | 1 hour, scoped to the active client |
+| History / favorites shown | 100 / 50 most recent |
 
-**There is no remote default.** The prefilled `localhost:5000` is a placeholder, not a service,
-so the app cannot translate until you point it somewhere real — deliberate, because a working
-default would mean text going somewhere you did not choose.
+## Preferences and storage
 
-More than one server can be saved and switched between; they live under the `servers` and
-`activeServer` keys.
+Settings include system/light/dark theme, text size, default languages, automatic source selection, and onboarding reset. Server records (including optional API keys) and settings are stored in ordinary app storage. API keys are not stored in the Keychain. History and favorites are stored in local SQLite.
 
-## Settings
-
-| Setting | Effect |
-|---|---|
-| Theme | System, light, or dark |
-| Text size | Display scaling |
-| Default source language | Preselected on the translate screen |
-| Default target language | Preselected on the translate screen |
-| Auto-detect | Whether the source defaults to detection |
-| Onboarding reset | Runs first-launch flow again |
-
-Persisted under the `settings` key.
-
-## What is stored, and where
-
-Two separate stores, doing different jobs:
-
-| Store | Holds | Notes |
-|---|---|---|
-| Key-value | Server list, active server, settings, onboarding flag | Small preferences |
-| SQLite | Translation history and favourites | Can grow large; searchable |
-
-History in a real database rather than a preferences blob is what makes searching it practical
-and what allows the JSON export.
-
-**Neither is sent anywhere.** The server sees the text it is asked to translate; it does not
-see your history.
-
-## Limits and timeouts
-
-Built in rather than configurable:
-
-| Limit | Value |
-|---|---|
-| Request timeout | 10s, every request |
-| Input length | 5,000 characters |
-| History shown | 100 most recent |
-| Favourites shown | 50 most recent |
-| Debounce before translating | 500ms |
-| Language list cache | 1 hour |
-
-A self-hosted instance on modest hardware can exceed the 10s timeout on long text — see
-[Troubleshooting](./troubleshooting.md). Note that the history and favourites numbers are
-**display** limits, not storage limits; see
-[`internal/known-issues.md`](./internal/known-issues.md).
-
-## Languages
-
-A built-in list covers the common cases, and the app also asks your server which languages it
-actually supports. A server with fewer models offers fewer options.
-
-## API keys
-
-A LibreTranslate instance can require a key. Enter it alongside the URL and it is sent as
-`api_key` in the body of translate and detect requests.
-
-It is stored with the rest of the server record in ordinary app storage, not the iOS Keychain —
-see [`internal/known-issues.md`](./internal/known-issues.md) before using a key you would mind
-losing.
-
-The connection check that runs when you add a server calls `/languages`, which most instances
-serve without a key. A **wrong** key can therefore pass setup and only fail at the first
-translation.
+Text and files go to the selected server. The app’s history database is not uploaded. Speech input may use the platform’s speech recognition service.

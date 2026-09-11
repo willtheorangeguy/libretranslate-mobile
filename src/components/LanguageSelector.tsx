@@ -1,14 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  Modal,
-  FlatList,
-} from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, Modal, FlatList, TextInput } from 'react-native';
 import { Language } from '../types';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons } from '@react-native-vector-icons/material-icons/static';
 import { useThemeColors, ThemeColors } from '../theme';
 
 interface Props {
@@ -25,7 +18,7 @@ function LanguageDivider() {
       StyleSheet.create({
         line: { height: 1, backgroundColor: colors.borderSubtle },
       }),
-    [colors]
+    [colors],
   );
   return <View style={dividerStyles.line} />;
 }
@@ -39,6 +32,7 @@ export default function LanguageSelector({
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [showModal, setShowModal] = useState(false);
+  const [search, setSearch] = useState('');
   const selectedLanguage = languages.find(lang => lang.code === selectedLang);
   const displayName = selectedLanguage?.name || placeholder;
 
@@ -49,10 +43,9 @@ export default function LanguageSelector({
 
   const renderLanguageItem = ({ item }: { item: Language }) => (
     <TouchableOpacity
-      style={[
-        styles.languageItem,
-        selectedLang === item.code && styles.languageItemSelected,
-      ]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: selectedLang === item.code }}
+      style={[styles.languageItem, selectedLang === item.code && styles.languageItemSelected]}
       onPress={() => handleSelect(item.code)}
     >
       <Text
@@ -73,9 +66,12 @@ export default function LanguageSelector({
     <>
       <TouchableOpacity
         accessibilityRole="button"
-        accessibilityLabel="Open language selector"
+        accessibilityLabel={`${placeholder}: ${displayName}`}
         style={styles.selector}
-        onPress={() => setShowModal(true)}
+        onPress={() => {
+          setSearch('');
+          setShowModal(true);
+        }}
       >
         <Text style={styles.selectorText} numberOfLines={1}>
           {displayName}
@@ -93,13 +89,32 @@ export default function LanguageSelector({
           <View style={styles.modal}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Language</Text>
-              <TouchableOpacity onPress={() => setShowModal(false)}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Close language selector"
+                onPress={() => setShowModal(false)}
+              >
                 <MaterialIcons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
 
+            <TextInput
+              accessibilityLabel="Search languages"
+              placeholder="Search languages"
+              placeholderTextColor={colors.textMuted}
+              value={search}
+              onChangeText={setSearch}
+              style={styles.search}
+              autoCorrect={false}
+            />
             <FlatList
-              data={languages}
+              keyboardShouldPersistTaps="handled"
+              ListEmptyComponent={
+                <Text style={styles.languageItemText}>No matching languages</Text>
+              }
+              data={languages.filter(lang =>
+                `${lang.name} ${lang.code}`.toLowerCase().includes(search.toLowerCase()),
+              )}
               keyExtractor={item => item.code}
               renderItem={renderLanguageItem}
               ItemSeparatorComponent={LanguageDivider}
@@ -113,8 +128,9 @@ export default function LanguageSelector({
 
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
+    search: { padding: 16, color: c.textPrimary, fontSize: 16 },
     selector: {
-      flex: 1,
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
