@@ -1,0 +1,16 @@
+diff --git a/node_modules/sprintf-js/src/sprintf.js b/node_modules/sprintf-js/src/sprintf.js
+index ddfc1f4..f6b2ec3 100644
+--- a/node_modules/sprintf-js/src/sprintf.js
++++ b/node_modules/sprintf-js/src/sprintf.js
+@@ -57,5 +57,11 @@
+                 if (re.number.test(match[8])) {
+                     is_positive = arg >= 0
+                 }
+ 
++                if (match[7] !== undefined && /[efg]/.test(match[8])) {
++                    var precision = Number(match[7])
++                    var minimum = match[8] === "g" ? 1 : 0
++                    match[7] = String(Math.max(minimum, Math.min(100, precision)))
++                }
++
+                 switch (match[8]) {
