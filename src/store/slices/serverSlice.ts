@@ -20,7 +20,10 @@ export const serverSlice = createSlice({
   initialState,
   reducers: {
     addServer: (state, action: PayloadAction<ServerConfig>) => {
-      state.serverConfigs.push(action.payload);
+      state.serverConfigs = [
+        action.payload,
+        ...state.serverConfigs.filter(server => server.url !== action.payload.url),
+      ];
       if (!state.activeServer) {
         state.activeServer = action.payload;
       }

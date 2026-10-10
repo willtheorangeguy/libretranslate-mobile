@@ -2,6 +2,7 @@ import { getClient } from './LibreTranslateClient';
 import { Language } from '../types';
 
 let cachedLanguages: Language[] | null = null;
+let cachedClient: ReturnType<typeof getClient> | null = null;
 let languagesCacheTime = 0;
 const CACHE_DURATION = 3600000; // 1 hour
 
@@ -11,20 +12,27 @@ export const TranslationService = {
    */
   async getLanguages(forceRefresh: boolean = false): Promise<Language[]> {
     const now = Date.now();
+    const client = getClient();
+    if (cachedClient !== client) {
+      cachedLanguages = null;
+      languagesCacheTime = 0;
+      cachedClient = client;
+    }
 
     if (!forceRefresh && cachedLanguages && now - languagesCacheTime < CACHE_DURATION) {
       return cachedLanguages;
     }
 
     try {
-      const client = getClient();
       const languages = await client.getLanguages();
-      cachedLanguages = languages;
-      languagesCacheTime = now;
+      if (cachedClient === client) {
+        cachedLanguages = languages;
+        languagesCacheTime = now;
+      }
       return languages;
     } catch (error) {
       // Return cached languages if available, even if expired
-      if (cachedLanguages) {
+      if (cachedClient === client && cachedLanguages) {
         return cachedLanguages;
       }
       throw error;
@@ -34,11 +42,7 @@ export const TranslationService = {
   /**
    * Translate text from source to target language
    */
-  async translate(
-    text: string,
-    sourceLang: string,
-    targetLang: string
-  ): Promise<string> {
+  async translate(text: string, sourceLang: string, targetLang: string): Promise<string> {
     if (!text.trim()) {
       return '';
     }

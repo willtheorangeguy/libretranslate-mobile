@@ -1,4 +1,4 @@
-import Voice from '@react-native-community/voice';
+import Voice from '@react-native-voice/voice';
 import Tts from 'react-native-tts';
 
 const LANGUAGE_TO_LOCALE: Record<string, string> = {

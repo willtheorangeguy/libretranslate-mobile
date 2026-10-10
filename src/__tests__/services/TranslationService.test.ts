@@ -64,3 +64,13 @@ describe('TranslationService', () => {
     });
   });
 });
+
+test('language cache is scoped to the active client', async () => {
+  const first = { getLanguages: jest.fn().mockResolvedValue([{ code: 'en', name: 'English' }]) };
+  const second = { getLanguages: jest.fn().mockResolvedValue([{ code: 'es', name: 'Spanish' }]) };
+  (LibreTranslateClient.getClient as jest.Mock).mockReturnValue(first);
+  await TranslationService.getLanguages();
+  (LibreTranslateClient.getClient as jest.Mock).mockReturnValue(second);
+  expect(await TranslationService.getLanguages()).toEqual([{ code: 'es', name: 'Spanish' }]);
+  expect(second.getLanguages).toHaveBeenCalledTimes(1);
+});

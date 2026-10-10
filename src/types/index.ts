@@ -2,6 +2,7 @@
 export interface Language {
   code: string;
   name: string;
+  targets?: string[];
 }
 
 export interface TranslationRequest {
@@ -12,6 +13,8 @@ export interface TranslationRequest {
 
 export interface TranslationResponse {
   translatedText: string;
+  detectedLanguage?: { language: string; confidence: number };
+  alternatives?: string[];
 }
 
 export type DetectionResponse = Array<{
@@ -62,3 +65,17 @@ export type BottomTabParamList = {
   Favorites: undefined;
   Settings: undefined;
 };
+
+export interface FrontendSettings {
+  charLimit?: number;
+  keyRequired?: boolean;
+  apiKeys?: boolean;
+  filesTranslation?: boolean;
+  supportedFilesFormat?: string[];
+}
+
+export interface TranslationFile {
+  uri: string;
+  name: string;
+  type: string;
+}

@@ -65,7 +65,7 @@ export const DatabaseService = {
       `
         INSERT OR REPLACE INTO translations
         (id, source_text, translated_text, source_lang, target_lang, created_at, is_favorite)
-        VALUES (?, ?, ?, ?, ?, ?, ?);
+        VALUES (?, ?, ?, ?, ?, ?, COALESCE((SELECT is_favorite FROM translations WHERE id = ?), ?));
       `,
       [
         translation.id,
@@ -74,8 +74,9 @@ export const DatabaseService = {
         translation.sourceLang,
         translation.targetLang,
         translation.timestamp,
+        translation.id,
         translation.isFavorite ? 1 : 0,
-      ]
+      ],
     );
   },
 
@@ -147,7 +148,7 @@ export const DatabaseService = {
         SET is_favorite = CASE WHEN is_favorite = 1 THEN 0 ELSE 1 END
         WHERE id = ?;
       `,
-      [translationId]
+      [translationId],
     );
   },
 

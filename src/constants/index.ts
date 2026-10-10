@@ -1,3 +1,13 @@
+import { ServerConfig } from '../types';
+
+export const DEFAULT_SERVER_URL = 'https://libretranslate.com';
+
+export const DEFAULT_SERVER: ServerConfig = {
+  url: DEFAULT_SERVER_URL,
+  name: 'LibreTranslate (default)',
+  isActive: true,
+};
+
 export const APP_NAME = 'LibreTranslate';
 export const APP_VERSION = '1.0.0';
 

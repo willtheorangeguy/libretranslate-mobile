@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons } from '@react-native-vector-icons/material-icons/static';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Translation } from '../types';
 import { DatabaseService } from '../services/DatabaseService';

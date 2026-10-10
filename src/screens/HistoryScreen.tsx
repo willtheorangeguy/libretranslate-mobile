@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons } from '@react-native-vector-icons/material-icons/static';
 import { DatabaseService } from '../services/DatabaseService';
 import { Translation } from '../types';
 import { useAppDispatch } from '../hooks/useRedux';
