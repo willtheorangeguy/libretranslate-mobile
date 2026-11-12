@@ -55,7 +55,7 @@
     "@types/react-native": "^0.72.8",
     "@react-native-community/cli-platform-android": "20.2.0",
     "@react-native-community/cli": "20.2.0",
-    "@react-native/metro-config": "^0.85.2",
+    "@react-native/metro-config": "^0.88.1",
     "@react-native/jest-preset": "0.85.2",
     "@babel/runtime": "^8.0.7",
     "@types/react-test-renderer": "^19.3.0",
