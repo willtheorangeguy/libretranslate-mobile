@@ -62,7 +62,7 @@
     "@react-native/babel-preset": "^0.88.0",
     "react-test-renderer": "19.3.0",
     "@types/react-native-sqlite-storage": "^6.0.5",
-    "@typescript-eslint/eslint-plugin": "^8.67.0",
+    "@typescript-eslint/eslint-plugin": "^8.72.2",
     "patch-package": "^8.0.1",
     "@typescript-eslint/parser": "^8.72.0"
   },
